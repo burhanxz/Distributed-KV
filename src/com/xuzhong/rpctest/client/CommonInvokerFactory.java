@@ -8,20 +8,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+import org.junit.runner.notification.RunListener.ThreadSafe;
 
 /**
  * a invoker factory class , and also a netty client introduce variants of
  * channels every of which binding to a specific server
  * 
+ * 
+ * 
  * @author bird
  *
  */
+@ThreadSafe
 public class CommonInvokerFactory extends InvokerCreator implements InvokerFactory {
 
 	private final static CommonInvokerFactory instance = new CommonInvokerFactory();
-
+	
+	//store invokers
 	private Map<InetSocketAddress, Invoker> invokerMap = new ConcurrentHashMap<>();
-
+	
+	private Lock lock = new ReentrantLock();
+	
 	private CommonInvokerFactory() {
 	}
 
@@ -30,16 +40,19 @@ public class CommonInvokerFactory extends InvokerCreator implements InvokerFacto
 	}
 
 	@Override
-	public synchronized Invoker get(InetSocketAddress address) throws Exception {
-		if (!invokerMap.containsKey(address)) {
-			invokerMap.putIfAbsent(address, createInvoker(address));
+	public Invoker get(InetSocketAddress address) throws Exception {
+//		if (!invokerMap.containsKey(address)) {
+//			invokerMap.putIfAbsent(address, createInvoker(address));
+//		}
+		/*针对耗时的创建对象操作，宜用这种方式操作，兼顾效率和线程安全性*/
+		while(!invokerMap.containsKey(address)) {
+			if(lock.tryLock()) {
+				invokerMap.putIfAbsent(address, createInvoker(address));
+			}
 		}
-
+		
 		Invoker invoker = invokerMap.get(address);
-
-		// heart beat package, to be continued...
-		/* invoker.startHeartBeat(); */
-
+		
 		return invoker;
 	}
 
@@ -85,7 +98,7 @@ public class CommonInvokerFactory extends InvokerCreator implements InvokerFacto
 	}
 
 	@Override
-	public synchronized boolean removeAll() {
+	public boolean removeAll() {
 		try {
 			Set<InetSocketAddress> keySet = invokerMap.keySet();
 			Iterator<InetSocketAddress> iter = keySet.iterator();
@@ -106,6 +119,9 @@ public class CommonInvokerFactory extends InvokerCreator implements InvokerFacto
 
 	@Override
 	public boolean checkConnect(InetSocketAddress address) {
+		if(!invokerMap.containsKey(address)) {
+			return false;
+		}
 		Invoker invoker = invokerMap.get(address);
 		
 		return invoker.isConnected();
