@@ -4,6 +4,7 @@ import java.net.InetSocketAddress;
 
 import com.xuzhong.rpc.common.IResponseObservable;
 import com.xuzhong.rpc.common.data.IResponse;
+import com.xuzhong.rpc.facet.Log;
 import com.xuzhong.rpc.util.ProtostuffUtil;
 
 import io.netty.buffer.ByteBuf;
@@ -37,7 +38,7 @@ public class ClientResponseHandler extends ChannelInboundHandlerAdapter {
 
 			IResponse iResponse = ProtostuffUtil.deserializer(bytes, IResponse.class);
 
-			System.out.println(iResponse);
+			Log.logger.info(iResponse);
 
 			observable.pushResponse(iResponse, (InetSocketAddress) ctx.channel().remoteAddress());
 		}

@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.xuzhong.rpc.facet.Log;
+
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -40,13 +42,14 @@ public class ReconnectHandler extends ChannelInboundHandlerAdapter{
 
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
+		Log.logger.info("ReconnectHandler: channel active");
 		times.set(0);
 		ctx.fireChannelActive();
 	}
 
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-		
+		Log.logger.info("ReconnectHandler: channel inactive");
 		synchronized(times) {
 			if(times.get() < MAXRECONNECTTIMES) {
 				int delay = 2 << times.incrementAndGet() ;

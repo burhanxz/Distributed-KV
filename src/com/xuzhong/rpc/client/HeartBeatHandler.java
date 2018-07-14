@@ -1,5 +1,7 @@
 package com.xuzhong.rpc.client;
 
+import com.xuzhong.rpc.facet.Log;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler.Sharable;
@@ -23,6 +25,7 @@ public class HeartBeatHandler extends ChannelInboundHandlerAdapter {
 			state = ((IdleStateEvent) evt).state();
 
 		if (state == IdleState.WRITER_IDLE) {
+			Log.logger.info("send heartbeat package");
 			ctx.writeAndFlush(HEARTBEATPACKAGE.copy());
 			return;
 		}

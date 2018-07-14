@@ -2,6 +2,7 @@ package com.xuzhong.rpc.server;
 
 import com.xuzhong.rpc.common.data.IRequest;
 import com.xuzhong.rpc.common.data.IResponse;
+import com.xuzhong.rpc.facet.Log;
 import com.xuzhong.rpc.service.ComputeService;
 import com.xuzhong.rpc.service.ComputeServiceImpl;
 import com.xuzhong.rpc.service.NameService;
@@ -33,7 +34,7 @@ public class ServerInHandler extends ChannelInboundHandlerAdapter{
 		
 		IRequest ir = ProtostuffUtil.deserializer(bytes, IRequest.class);
 		
-		System.out.println(ctx.channel().remoteAddress().toString() + ":" + ir);
+		Log.logger.info(ir);
 		
 
 		
@@ -57,7 +58,7 @@ public class ServerInHandler extends ChannelInboundHandlerAdapter{
 		
 		byte[] resBytes = ProtostuffUtil.serializer(iResponse);
 		
-		System.out.println(iResponse);
+		Log.logger.info(iResponse);
 		
 		ctx.channel().writeAndFlush(Unpooled.copiedBuffer(resBytes));
 		
@@ -67,8 +68,8 @@ public class ServerInHandler extends ChannelInboundHandlerAdapter{
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
 		super.channelActive(ctx);
-		System.out.println("channel is active !");
-		System.out.println(ctx.channel().remoteAddress());
+		Log.logger.info("channel is active !");
+		Log.logger.debug(ctx.channel().remoteAddress());
 	}
 
 

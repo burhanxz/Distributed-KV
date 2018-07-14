@@ -26,12 +26,12 @@ import org.junit.runner.notification.RunListener.ThreadSafe;
 public class CommonInvokerFactory extends InvokerCreator implements InvokerFactory {
 
 	private final static CommonInvokerFactory instance = new CommonInvokerFactory();
-	
-	//store invokers
+
+	// store invokers
 	private Map<InetSocketAddress, Invoker> invokerMap = new ConcurrentHashMap<>();
-	
+
 	private Lock lock = new ReentrantLock();
-	
+
 	private CommonInvokerFactory() {
 	}
 
@@ -41,18 +41,22 @@ public class CommonInvokerFactory extends InvokerCreator implements InvokerFacto
 
 	@Override
 	public Invoker get(InetSocketAddress address) throws Exception {
-//		if (!invokerMap.containsKey(address)) {
-//			invokerMap.putIfAbsent(address, createInvoker(address));
-//		}
-		/*针对耗时的创建对象操作，宜用这种方式操作，兼顾效率和线程安全性*/
-		while(!invokerMap.containsKey(address)) {
-			if(lock.tryLock()) {
-				invokerMap.putIfAbsent(address, createInvoker(address));
+		// if (!invokerMap.containsKey(address)) {
+		// invokerMap.putIfAbsent(address, createInvoker(address));
+		// }
+		/* 针对耗时的创建对象操作，宜用这种方式操作，兼顾效率和线程安全性 */
+		while (!invokerMap.containsKey(address)) {
+			if (lock.tryLock()) {
+				try {
+					invokerMap.putIfAbsent(address, createInvoker(address));
+				} finally {
+					lock.unlock();
+				}
 			}
 		}
-		
+
 		Invoker invoker = invokerMap.get(address);
-		
+
 		return invoker;
 	}
 
@@ -102,47 +106,46 @@ public class CommonInvokerFactory extends InvokerCreator implements InvokerFacto
 		try {
 			Set<InetSocketAddress> keySet = invokerMap.keySet();
 			Iterator<InetSocketAddress> iter = keySet.iterator();
-			
-			while(iter.hasNext()) {
+
+			while (iter.hasNext()) {
 				Invoker invoker = invokerMap.get(iter.next());
 				invoker.terminateChannel();
 				iter.remove();
 			}
-		} catch (Exception e) {			
+		} catch (Exception e) {
 			e.printStackTrace();
-			
+
 			return false;
 		}
-		
+
 		return true;
 	}
 
 	@Override
 	public boolean checkConnect(InetSocketAddress address) {
-		if(!invokerMap.containsKey(address)) {
+		if (!invokerMap.containsKey(address)) {
 			return false;
 		}
 		Invoker invoker = invokerMap.get(address);
-		
+
 		return invoker.isConnected();
 
 	}
 
 	@Override
 	public Map<InetSocketAddress, Boolean> checkAllConnect() {
-		
+
 		Map<InetSocketAddress, Boolean> map = new HashMap<>();
-		
+
 		Set<InetSocketAddress> keySet = invokerMap.keySet();
 		Iterator<InetSocketAddress> iter = keySet.iterator();
-		
-		while(iter.hasNext()) {
+
+		while (iter.hasNext()) {
 			map.put(iter.next(), invokerMap.get(iter.next()).isConnected());
 		}
-		
+
 		return map;
 
 	}
-
 
 }

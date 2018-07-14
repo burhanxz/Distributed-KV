@@ -1,5 +1,7 @@
 package com.xuzhong.rpc.server;
 
+import com.xuzhong.rpc.facet.Log;
+
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -37,12 +39,12 @@ public class Server {
 
 				});
 		try {
-			ChannelFuture f = bootstrap.bind("127.0.0.1", 8080).addListener(new GenericFutureListener<Future<? super Void>>() {
+			ChannelFuture f = bootstrap.bind("127.0.0.1", 5000).addListener(new GenericFutureListener<Future<? super Void>>() {
 
 				@Override
 				public void operationComplete(Future<? super Void> future) throws Exception {
 					if (future.isSuccess())
-						System.out.println("link#");
+						Log.logger.info("server is listenning to 127.0.0.1:5000");
 
 				}
 			});
