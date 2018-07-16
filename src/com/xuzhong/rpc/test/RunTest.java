@@ -47,19 +47,19 @@ public class RunTest {
 
 	}
 
-	@Test
-	public void test() throws Exception {
-		Scanner scan = new Scanner(System.in);
-		Random random = new Random();
-		while (true) {
-			for (int i = 0; i != 1; i++) {
-				Log.logger.info("============================thread " + i + " ===============================");
-				new myThread(i).start();
-			}
-			//block
-			String s = scan.next();
-			
-		}
-
+//	@Test
+	public static void main(String[] args) throws Exception {
+//		Scanner scan = new Scanner(System.in);
+//		Random random = new Random();
+//		while (true) {
+//			for (int i = 0; i != 1; i++) {
+//				Log.logger.info("============================thread " + i + " ===============================");
+//				new myThread(i).start();
+//			}
+//			//block
+//			String s = scan.next();
+//			
+//		}
+		new RunTest().new myThread(1).start();
 	}
 }
