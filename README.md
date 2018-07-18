@@ -6,7 +6,7 @@ a  RPC middleware based on netty<br>
 - client heartbeat and reconnect machanism，TCP stick package problem solved;
 - protostuff serializaion;
 - service register machanism based on zookeeper;
--
+
 
 客户端结构图 structure of client:<br>
 ![image](https://github.com/burhanxz/RPC-middleware/blob/master/client%E7%BB%93%E6%9E%84.png)<br>
