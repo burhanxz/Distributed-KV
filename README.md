@@ -1,16 +1,17 @@
 # RPC-middleware
+a  RPC middleware based on netty<br>
+<br>
 - one can use this middleware like using java rmi;
 - client pool and long-term connection; 
 - client heartbeat and reconnect machanism，TCP stick package problem solved;
 - protostuff serializaion;
-- service register machanism;
-a  RPC middleware based on netty<br>
-
+- service register machanism based on zookeeper;
+<br>
 - 此中间件可以像使用Java rmi一样使用;
 - 客户端连接池; 
 - 完善的心跳包、重连、粘包解决机制;
 - 高效序列化与传输;
-- 服务注册机制，实时获取最新服务列表;
+- 基于zookeeper的服务注册机制，实时获取最新服务列表;
 客户端结构图 structure of client(partial view):<br>
 ![image](https://github.com/burhanxz/RPC-middleware/blob/master/client%E7%BB%93%E6%9E%84.png)<br>
 
