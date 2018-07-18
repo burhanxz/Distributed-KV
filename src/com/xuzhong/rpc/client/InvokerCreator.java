@@ -79,12 +79,12 @@ public abstract class InvokerCreator {
 
 		});
 		
-		for(Object h : handlers.toArray()) {
-			System.out.println(h.toString());
-		}
+//		for(Object h : handlers.toArray()) {
+//			System.out.println(h.toString());
+//		}
 		
 		ChannelFuture future = bootstrap.connect(address).sync();
-		System.out.println("createinvoker continue..");
+//		System.out.println("createinvoker continue..");
 		if (future.isSuccess() && future.channel().isActive()) {
 			System.out.println("connect success!" + future.channel().remoteAddress());
 			Channel channel = future.channel();

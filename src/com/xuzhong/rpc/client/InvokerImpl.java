@@ -13,6 +13,7 @@ import com.xuzhong.rpc.common.IResponseObservable;
 import com.xuzhong.rpc.common.IResponseObserver;
 import com.xuzhong.rpc.common.data.IRequest;
 import com.xuzhong.rpc.common.data.IResponse;
+import com.xuzhong.rpc.facet.Log;
 import com.xuzhong.rpc.util.ProtostuffUtil;
 import com.xuzhong.rpc.util.SerialNumberUtil;
 
@@ -31,6 +32,8 @@ public class InvokerImpl implements Invoker {
 	 * a invoker composes of a channel(represent a server) , and a observer(bind to
 	 * a specific server)
 	 */
+	private static final ExecutorService monitorPool = Executors.newFixedThreadPool(128);
+	
 	private Channel channel;
 
 	private InetSocketAddress address;
@@ -44,7 +47,7 @@ public class InvokerImpl implements Invoker {
 		this.channel = channel;
 		this.address = address;
 		observer = new IResponseObserver(this.address);
-		observable.addObserver((Observer) observer);
+		observable.addObserver(observer);
 	}
 
 	/*
@@ -68,13 +71,12 @@ public class InvokerImpl implements Invoker {
 		 * key process. write message to channel, which means to transfer message via
 		 * network
 		 */
-		System.out.println(channel.localAddress().toString() + ":" + iRequest);
+		Log.logger.info(channel.localAddress().toString() + ":" + iRequest);
 		synchronized (this) {
 			channel.writeAndFlush(Unpooled.copiedBuffer(msg));
 		}
 
 		/* monitor responses */
-		ExecutorService monitorPool = Executors.newFixedThreadPool(128);
 		Future<IResponse> future = monitorPool.submit(new Callable<IResponse>() {
 
 			/*
@@ -82,9 +84,9 @@ public class InvokerImpl implements Invoker {
 			 */
 			@Override
 			public IResponse call() throws Exception {
-
+				IResponse iResponse = null;
 				while (true) {
-					IResponse iResponse = observer.getResponse(id);
+					iResponse = observer.getResponse(id);
 					if (iResponse == null)
 						continue;
 					return iResponse;

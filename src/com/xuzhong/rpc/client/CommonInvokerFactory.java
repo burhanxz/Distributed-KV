@@ -14,10 +14,10 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.junit.runner.notification.RunListener.ThreadSafe;
 
 /**
- * a invoker factory class , and also a netty client introduce variants of
+ * a invoker factory class , and also a netty client pool introduce variants of
  * channels every of which binding to a specific server
  * 
- * 
+ * 一个invoker工厂类，也是一个客户端连接池，它分发和不同服务器绑定的channel
  * 
  * @author bird
  *
@@ -29,17 +29,18 @@ public class CommonInvokerFactory extends InvokerCreator implements InvokerFacto
 
 	// store invokers
 	private Map<InetSocketAddress, Invoker> invokerMap = new ConcurrentHashMap<>();
-
-	private Lock lock = new ReentrantLock();
-
+	//用于互斥地建立连接的锁
+	private static final Lock lock = new ReentrantLock();
+	
 	private CommonInvokerFactory() {
 	}
 
 	public static CommonInvokerFactory getInstance() {
 		return instance;
 	}
-
+	
 	@Override
+	//线程安全地获取invoker
 	public Invoker get(InetSocketAddress address) throws Exception {
 		// if (!invokerMap.containsKey(address)) {
 		// invokerMap.putIfAbsent(address, createInvoker(address));
@@ -61,6 +62,7 @@ public class CommonInvokerFactory extends InvokerCreator implements InvokerFacto
 	}
 
 	@Override
+	//只读操作，列出所有invoker
 	public List<Invoker> listAll() {
 		List<Invoker> resultList = new ArrayList<Invoker>();
 

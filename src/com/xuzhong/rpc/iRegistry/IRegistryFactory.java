@@ -15,17 +15,19 @@ public class IRegistryFactory {
 	
 	private Map<InetSocketAddress, IRegistry> iRegistryMap = new ConcurrentHashMap<>();
 	 
-	public IRegistry getIRegistry(InetSocketAddress address) throws Exception {
+	public IRegistry getZkRegistry(InetSocketAddress address) throws Exception {
 		
 		if(!iRegistryMap.containsKey(address)) {
 			
-			IRegistry iRegistry = new CommonIRegistryImpl(address);
+			IRegistry iRegistry = new ZooKeeperIRegistryImpl(address);
 			
 			IRegistry iRegistryInMap = iRegistryMap.putIfAbsent(address, iRegistry);
 			
 			if(iRegistryInMap != null) {
 				iRegistry = iRegistryInMap;
 			}
+			//让注册机运行
+			((ZooKeeperIRegistryImpl)iRegistry).run();
 			
 			return iRegistry;
 			

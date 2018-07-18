@@ -41,5 +41,9 @@ public class IResponseObserver implements Observer {
 		else
 			return null;
 	}
+	
+	public boolean existsResponse(Long id) {
+		return responses.containsKey(id);
+	}
 
 }

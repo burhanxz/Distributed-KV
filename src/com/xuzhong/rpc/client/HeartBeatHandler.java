@@ -16,6 +16,7 @@ import io.netty.handler.timeout.IdleStateEvent;
  */
 @Sharable
 public class HeartBeatHandler extends ChannelInboundHandlerAdapter {
+	//通用的心跳包数据
 	private final static ByteBuf HEARTBEATPACKAGE = Unpooled.copiedBuffer("heartbeat".getBytes());
 
 	@Override
@@ -23,7 +24,7 @@ public class HeartBeatHandler extends ChannelInboundHandlerAdapter {
 		IdleState state = null;
 		if (evt instanceof IdleStateEvent)
 			state = ((IdleStateEvent) evt).state();
-
+		//对于写空闲，即长时间未传送数据，将传输心跳包
 		if (state == IdleState.WRITER_IDLE) {
 			Log.logger.info("send heartbeat package");
 			ctx.writeAndFlush(HEARTBEATPACKAGE.copy());

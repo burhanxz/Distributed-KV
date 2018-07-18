@@ -4,9 +4,7 @@ import java.net.InetSocketAddress;
 
 public interface IRegistry {
 	
-	public <T> T getService(Class<T> serviceClazz);
+	public <T> T lookup(Class<T> serviceClazz);
 	
-	public InetSocketAddress getRemoteAddress();
-	
-	public void release();
+	public InetSocketAddress getRegisterAddress();
 }

@@ -26,17 +26,18 @@ public class RunTest {
 			Log.logger.info("run");
 			IRegistry iRegistry;
 			try {
-				iRegistry = IRegistryFactory.getInstance().getIRegistry(new InetSocketAddress("127.0.0.1", 5000));
+				iRegistry = IRegistryFactory.getInstance().getZkRegistry(new InetSocketAddress("127.0.0.1", 3000));
+				
+				//测试代码中，应当在zookeeper后台注册好127.0.0.1:8080
+				NameService nameServiceStub = iRegistry.lookup(NameService.class);
 
-				NameService nameService = iRegistry.getService(NameService.class);
+				Log.logger.info("@" + nameServiceStub.getName());
 
-				Log.logger.info("@" + nameService.getName());
+				ComputeService computeServiceStub = iRegistry.lookup(ComputeService.class);
 
-				ComputeService computeService = iRegistry.getService(ComputeService.class);
+				Log.logger.info("#" + computeServiceStub.getName(new int[] { this.num }));
 
-				Log.logger.info("#" + computeService.getName(new int[] { this.num }));
-
-				Log.logger.info("#" + computeService.compute(new int[] { num, num, num }));
+				Log.logger.info("#" + computeServiceStub.compute(new int[] { num, num, num }));
 
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
