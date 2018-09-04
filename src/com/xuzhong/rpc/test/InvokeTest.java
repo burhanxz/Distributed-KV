@@ -1,12 +1,6 @@
 package com.xuzhong.rpc.test;
 
-import java.net.InetSocketAddress;
-
-import org.junit.jupiter.api.Test;
-
-import com.xuzhong.rpc.iRegistry.ZooKeeperIRegistryImpl;
-import com.xuzhong.rpc.iRegistry.IRegistry;
-import com.xuzhong.rpc.service.NameService;
+import org.junit.Test;
 
 public class InvokeTest {
 	@Test
