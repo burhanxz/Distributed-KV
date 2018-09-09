@@ -1,5 +1,8 @@
 package com.xuzhong.rpc.test;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.concurrent.CountDownLatch;
 
 import com.xuzhong.rpc.lock.RPCSecurity;
@@ -22,9 +25,9 @@ public class RPCSecurityTest {
 						e.printStackTrace();
 					}
 
-					Foo fooStub = (Foo) RPCSecurity.getDistributedLockStub(Foo.class, new FooImpl());
-					fooStub.print();
-
+					Foo fooStub = AOP.wrap(Foo.class, new FooImpl());
+					Foo stub = (Foo) RPCSecurity.getDistributedLockStub(Foo.class, fooStub);
+					stub.print();
 				}
 			}.start();
 		}
@@ -95,4 +98,22 @@ class FooImpl implements Foo {
 		System.out.println("线程：" + Thread.currentThread().getName());
 	}
 
+}
+class AOP {
+	@SuppressWarnings("unchecked")
+	public static <T, P extends T> T wrap(Class<T> interfaceClazz, P implObject) {
+		T ret;
+		ret = (T) Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(),
+				new Class<?>[] { interfaceClazz }, new InvocationHandler() {
+
+					@Override
+					public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+						Object o = null;
+						System.out.println("wrap!!!!");
+						o = method.invoke(implObject, args);
+						return o;
+					}
+				});
+		return ret;
+	}
 }
