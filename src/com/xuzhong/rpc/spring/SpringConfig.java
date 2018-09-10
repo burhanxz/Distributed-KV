@@ -5,6 +5,12 @@ import org.springframework.context.annotation.Configuration;
 
 import com.xuzhong.rpc.service.ComputeService;
 
+/**
+ * @author bird
+ * spring配置类
+ * 当需要引入新的服务时，需要在此处配置
+ * 配置信息包括bean的名字，接口类和ServiceSubscribe配置
+ */
 @Configuration
 public class SpringConfig {
 
