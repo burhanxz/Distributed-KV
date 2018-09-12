@@ -7,10 +7,10 @@ import java.util.Scanner;
 import org.junit.Test;
 
 import com.xuzhong.rpc.facet.Log;
-import com.xuzhong.rpc.iRegistry.IRegistry;
-import com.xuzhong.rpc.iRegistry.IRegistryFactory;
 import com.xuzhong.rpc.service.ComputeService;
 import com.xuzhong.rpc.service.NameService;
+import com.xuzhong.rpc.zookeeper.IRegistry;
+import com.xuzhong.rpc.zookeeper.IRegistryFactory;
 
 public class RunTest {
 

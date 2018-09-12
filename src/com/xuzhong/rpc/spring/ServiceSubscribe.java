@@ -4,10 +4,10 @@ import java.net.InetSocketAddress;
 
 import org.springframework.beans.factory.FactoryBean;
 
-import com.xuzhong.rpc.iRegistry.IRegistry;
-import com.xuzhong.rpc.iRegistry.IRegistryFactory;
 import com.xuzhong.rpc.service.ComputeService;
 import com.xuzhong.rpc.service.ComputeServiceImpl;
+import com.xuzhong.rpc.zookeeper.IRegistry;
+import com.xuzhong.rpc.zookeeper.IRegistryFactory;
 
 /**
  * @author bird 服务订阅Bean

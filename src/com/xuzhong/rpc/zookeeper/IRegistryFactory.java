@@ -1,4 +1,4 @@
-package com.xuzhong.rpc.iRegistry;
+package com.xuzhong.rpc.zookeeper;
 
 import java.net.InetSocketAddress;
 import java.util.Map;

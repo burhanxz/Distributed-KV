@@ -3,6 +3,7 @@ package com.xuzhong.rpc.spring;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import com.xuzhong.rpc.service.ComputeService;
+import com.xuzhong.rpc.service.ComputeServiceImpl;
 
 /**
  * @author bird
@@ -27,5 +28,13 @@ public class SpringConfig {
 		subscribe.setConfig(new ServiceSubscribeConfig());
 
 		return new ServiceSubscribe<ComputeService>();
+	}
+	@Bean(name = "computeService2")
+	public ServicePublish getComputeService2() {
+		ServicePublish ret = new ServicePublish();
+		ret.setTimeout(1000);
+		ret.setServiceImpl(new ComputeServiceImpl());
+		ret.setServiceInterfaceClazz(ComputeService.class);
+		return ret;
 	}
 }

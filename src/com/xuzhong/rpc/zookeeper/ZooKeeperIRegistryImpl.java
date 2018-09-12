@@ -1,4 +1,4 @@
-package com.xuzhong.rpc.iRegistry;
+package com.xuzhong.rpc.zookeeper;
 
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationHandler;

@@ -1,4 +1,4 @@
-package com.xuzhong.rpc.server;
+package com.xuzhong.rpc.zookeeper;
 
 import java.io.IOException;
 import java.util.List;
