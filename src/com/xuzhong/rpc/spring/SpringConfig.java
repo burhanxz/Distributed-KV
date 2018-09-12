@@ -2,7 +2,6 @@ package com.xuzhong.rpc.spring;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
 import com.xuzhong.rpc.service.ComputeService;
 
 /**
