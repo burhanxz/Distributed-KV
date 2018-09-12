@@ -1,5 +1,4 @@
-# RPC-middleware
-a  RPC middleware based on netty<br>
+# MicroServices-Framework
 <br>
 - one can use this middleware like using java rmi;
 - client pool and long-term connection; 
