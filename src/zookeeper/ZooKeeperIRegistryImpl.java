@@ -17,48 +17,61 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
+
+import com.alibaba.fastjson.JSON;
+
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 
 import client.CommonInvokerFactory;
 import client.Invoker;
 import service.NameService;
 
+/**
+ * @author bird
+ * ZooKeeper实现的IRegistry
+ */
 public class ZooKeeperIRegistryImpl implements IRegistry, Watcher{
-	
+	/*ZooKeeper的地址*/
 	private InetSocketAddress zkAddress;
+	/*????*/
+	private static final Executor pool = Executors.newCachedThreadPool();
+	/*ZooKeeper连接类对象*/
+	public static ZooKeeper zk = null;
+	/*用于完成connect操作的锁*/
+	protected CountDownLatch countDownLatch = new CountDownLatch(1);
+	/*ZooKeeper参数，会话时间限制*/
+	private static final int SESSION_TIME = 2000;
+	/*用于存放ServiceInfo对象->RPCInvokeHandler对象的Map*/
+	private Map<String, RpcInvokeHandler> Service2RPCInvokeHandler = new HashMap<>();
 	
 //	private Invoker invoker;
 	
-	public ZooKeeperIRegistryImpl(InetSocketAddress address) throws Exception{
+	/**
+	 * @param address ZooKeeper连接地址
+	 * 构造器
+	 */
+	public ZooKeeperIRegistryImpl(InetSocketAddress address) {
 		this.zkAddress = address;
 //		this.invoker = CommonInvokerFactory.getInstance().get(address);
 	}
 	
 	
-
+	
+	/* 
+	 * @see zookeeper.IRegistry#lookup(java.lang.Class)
+	 */
 	@SuppressWarnings("unchecked")
 	@Override
 	public <T> T lookup(Class<T> serviceClazz) {
-		
+		//核心实现
+		//通过动态代理，获取代理对象
+		//通过map获取RPCInvokeHandler对象
 		T returnValue = (T)Proxy.newProxyInstance(serviceClazz.getClassLoader(), new Class<?>[] {serviceClazz},
-				map.get(serviceClazz.getName()));
+				Service2RPCInvokeHandler.get(serviceClazz.getName()));
 		
 		return returnValue;
 		
 	}
-	
-
-
-
-	private static final Executor pool = Executors.newCachedThreadPool();
-	
-	public static ZooKeeper zk = null;
-
-	protected CountDownLatch countDownLatch = new CountDownLatch(1);
-
-	private static final int SESSION_TIME = 2000;
-
-	private Map<String, RpcInvokeHandler> map = new HashMap<>();
 
 	@Override
 	public void process(WatchedEvent event) {
@@ -93,16 +106,16 @@ public class ZooKeeperIRegistryImpl implements IRegistry, Watcher{
 		}
 	}
 
-	public void getServices() throws KeeperException, InterruptedException, UnsupportedEncodingException {
+	public void getServices() throws KeeperException, InterruptedException, UnsupportedEncodingException, Exception {
 		List<String> serviceList = zk.getChildren("/", this);
 		System.out.println("--------------------------------");
 		
 		//有服务被删除了，同时也必定被服务器监视器监测到了，相应的监视器已经关闭而失活
 		//这是少数事件，可遍历
-		if(serviceList.size() < map.size()) {
-			Iterator<String> it = map.keySet().iterator();
+		if(serviceList.size() < Service2RPCInvokeHandler.size()) {
+			Iterator<String> it = Service2RPCInvokeHandler.keySet().iterator();
 			while(it.hasNext()) {
-				RpcInvokeHandler serverMonitor = (RpcInvokeHandler) map.get(it.next());
+				RpcInvokeHandler serverMonitor = (RpcInvokeHandler) Service2RPCInvokeHandler.get(it.next());
 				if(serverMonitor.isActive())
 					it.remove();
 			}
@@ -114,9 +127,12 @@ public class ZooKeeperIRegistryImpl implements IRegistry, Watcher{
 			//忽略zookeeper文件，这是用于选举的节点，不是服务节点
 			if (service.equals("zookeeper"))
 				continue;
-			if (!map.containsKey(service)) {
-				RpcInvokeHandler serverMonitor = new RpcInvokeHandler(zk, service);
-				map.put(service, serverMonitor);
+			//将服务名称转化为服务类
+			Class<?> serviceInterface = Class.forName("service." + service);
+			//>>>>>>>>>>>>>>>>>>>>
+			if (!Service2RPCInvokeHandler.containsKey(service)) {
+				RpcInvokeHandler serverMonitor = new RpcInvokeHandler(zk, serviceInterface);
+				Service2RPCInvokeHandler.put(service, serverMonitor);
 				pool.execute(serverMonitor);
 			}
 			System.out.println("@@@@@@@@@@@@@@@" + service);
