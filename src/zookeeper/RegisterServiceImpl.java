@@ -23,15 +23,33 @@ import facet.Log;
  *
  */
 public class RegisterServiceImpl implements RegisterService, Watcher{
+	/**
+	 * 锁的参数，等连接成功这一事件完成时释放锁
+	 */
 	private static int WAIT_FOR_CONNECT_SUCCESS = 1;
+	/**
+	 * zooKeeper连接对象
+	 */
 	private ZooKeeper zk;
+	/**
+	 * 执行connect方法时阻塞，收到ZooKeeper响应时释放
+	 */
 	private CountDownLatch latch = new CountDownLatch(WAIT_FOR_CONNECT_SUCCESS);
+	/**
+	 * 日志对象
+	 */
 	private Logger logger = Log.logger;
 	/**
 	 *  创建ZooKeeper目录时所设数据，为空字符串的比特数组
 	 */
 	private static final byte[] DIRECTORY_DATA = "".getBytes();
+	/**
+	 * servers目录是存放多个server信息的通用目录
+	 */
 	private static final String SERVER_REGISTER_DIRECTORY = "servers";
+	/**
+	 * 存放注册信息的叶节点名称"server"
+	 */
 	private static final String REGISTER_NODE_NAME = "server";
 	/* 
 	 * @see zookeeper.RegisterService#connect(java.lang.String, int)
@@ -51,24 +69,35 @@ public class RegisterServiceImpl implements RegisterService, Watcher{
 		}
 	}
 
+	/* 
+	 * @see zookeeper.RegisterService#register(zookeeper.RegisterInfo)
+	 */
 	@Override
 	public void register(RegisterInfo registerInfo) {
 		try {
+			//判断application目录是否存在并设置
+			//application目录名是RegisterInfo类的application
 			String applicationPath = "/" + registerInfo.getApplication();
 			Stat applicationStat = zk.exists(applicationPath, null);
 			if(applicationStat == null) {
+				//创建/application/
 				zk.create(applicationPath, DIRECTORY_DATA, null, CreateMode.PERSISTENT);
 			}
-			
+			//判断service目录是否存在并设置
+			//service目录名是RegisterInfo类的InterfaceClazz的类名
 			String servicePath = applicationPath + "/" + registerInfo.getInterfaceClazz().getName();
 			Stat serviceStat = zk.exists(servicePath, null);
 			if(serviceStat == null) {
+				//创建/application/service/ 
 				zk.create(servicePath, DIRECTORY_DATA, null, CreateMode.PERSISTENT);
+				//创建/application/service/servers
 				zk.create(servicePath + "/" + SERVER_REGISTER_DIRECTORY, DIRECTORY_DATA, null, CreateMode.PERSISTENT);
 			}
-			
+			//server目录形如server1,server2..
 			String serverPath = servicePath + "/" + REGISTER_NODE_NAME;
+			//将RegisterInfo序列化后存入server目录
 			byte[] registerData = registerInfo.toString().getBytes();
+			//创建server目录并存入序列化后的信息
 			zk.create(serverPath, registerData, null, CreateMode.EPHEMERAL_SEQUENTIAL);
 			
 		} catch (KeeperException e) {
