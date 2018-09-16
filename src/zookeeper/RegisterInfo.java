@@ -3,9 +3,14 @@ package zookeeper;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 
+/**
+ * 注册信息，序列化为json后存放在ZooKeeper服务器上
+ * @author bird
+ *
+ */
 public class RegisterInfo {
 	private Class<?> interfaceClazz;
-	private String appGroupId;
+	private String application;
 	private String host;
 	private int port;
 	private float weight;
@@ -21,11 +26,11 @@ public class RegisterInfo {
 	public void setInterfaceClazz(Class<?> interfaceClazz) {
 		this.interfaceClazz = interfaceClazz;
 	}
-	public String getAppGroupId() {
-		return appGroupId;
+	public String getApplication() {
+		return application;
 	}
-	public void setAppGroupId(String appGroupId) {
-		this.appGroupId = appGroupId;
+	public void setApplication(String application) {
+		this.application = application;
 	}
 	public String getHost() {
 		return host;
