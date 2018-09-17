@@ -149,7 +149,7 @@ public class RegisterServiceImpl implements RegisterService, Watcher {
 		while (true) {
 
 		}
-		// 运行结果
+		// ZooKeeper服务器上运行结果
 		// {"@type":"zookeeper.RegisterInfo","application":"app1","host":"3.3.3.3","implementClazz":{"@type":"zookeeper.FooImpl"},"interfaceClazz":"zookeeper.Foo","port":9999,"timeout":1000,"weight":0.3}
 		// cZxid = 0x1b
 		// ctime = Mon Sep 17 10:02:38 CST 2018

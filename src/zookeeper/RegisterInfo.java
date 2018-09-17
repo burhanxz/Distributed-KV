@@ -9,18 +9,44 @@ import com.alibaba.fastjson.serializer.SerializerFeature;
  *
  */
 public class RegisterInfo {
+	/**
+	 * 接口类
+	 */
 	private Class<?> interfaceClazz;
+	/**
+	 * 应用标识
+	 */
 	private String application;
+	/**
+	 * 对外提供服务的主机号
+	 */
 	private String host;
+	/**
+	 * 对外提供服务的端口号
+	 */
 	private int port;
+	/**
+	 * 权重，供负载均衡时参考
+	 */
 	private float weight;
+	/**
+	 * 超时失效时间，单位：ms
+	 */
 	private long timeout;
+	/**
+	 * 实现类对象
+	 */
 	private Object implementClazz;
 	
+	/* 
+	 * 序列化本对象，包括类名信息
+	 * @see java.lang.Object#toString()
+	 */
 	public String toString() {
 		return JSON.toJSONString(this, SerializerFeature.WriteClassName);
 	}
 	
+	//以下是getter和setter
 	public Class<?> getInterfaceClazz() {
 		return interfaceClazz;
 	}
