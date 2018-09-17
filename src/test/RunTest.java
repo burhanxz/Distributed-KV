@@ -9,8 +9,8 @@ import org.junit.Test;
 import facet.Log;
 import service.ComputeService;
 import service.NameService;
-import zookeeper.IRegistry;
-import zookeeper.IRegistryFactory;
+import zookeeper.Registry;
+import zookeeper.RegistryFactory;
 
 public class RunTest {
 
@@ -24,9 +24,9 @@ public class RunTest {
 		@Override
 		public void run() {
 			Log.logger.info("run");
-			IRegistry iRegistry;
+			Registry iRegistry;
 			try {
-				iRegistry = IRegistryFactory.getInstance().getZkRegistry(new InetSocketAddress("127.0.0.1", 3000));
+				iRegistry = RegistryFactory.getInstance().getZkRegistry(new InetSocketAddress("127.0.0.1", 3000));
 				
 				//测试代码中，应当在zookeeper后台注册好127.0.0.1:8080
 				NameService nameServiceStub = iRegistry.lookup(NameService.class);

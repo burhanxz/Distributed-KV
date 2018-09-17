@@ -7,42 +7,42 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * @author bird 工厂类，用于产生IRegistry对象
  */
-public class IRegistryFactory {
+public class RegistryFactory {
 	/* IRegistryFactory的单例类对象 */
-	private static final IRegistryFactory instance = new IRegistryFactory();
+	private static final RegistryFactory instance = new RegistryFactory();
 
 	/* 私有构造器，单例类用 */
-	private IRegistryFactory() {
+	private RegistryFactory() {
 	}
 
 	/**
 	 * @return 获取单例类对象
 	 */
-	public static IRegistryFactory getInstance() {
+	public static RegistryFactory getInstance() {
 		return instance;
 	}
 
 	/* 用于存放已生成的IRegistry */
-	private Map<InetSocketAddress, IRegistry> iRegistryMap = new ConcurrentHashMap<>();
+	private Map<InetSocketAddress, Registry> iRegistryMap = new ConcurrentHashMap<>();
 
 	/**
 	 * @param address
 	 *            根据地址来新建或取出已有的IRegistry
 	 * @return IRegistry对象
 	 */
-	public IRegistry getZkRegistry(InetSocketAddress address) {
+	public Registry getZkRegistry(InetSocketAddress address) {
 
 		if (!iRegistryMap.containsKey(address)) {
 
-			IRegistry iRegistry = new ZooKeeperIRegistryImpl(address);
+			Registry iRegistry = new ZooKeeperRegistryImpl(address);
 
-			IRegistry iRegistryInMap = iRegistryMap.putIfAbsent(address, iRegistry);
+			Registry iRegistryInMap = iRegistryMap.putIfAbsent(address, iRegistry);
 
 			if (iRegistryInMap != null) {
 				iRegistry = iRegistryInMap;
 			}
 			// 让注册机运行
-			((ZooKeeperIRegistryImpl) iRegistry).run();
+			((ZooKeeperRegistryImpl) iRegistry).run();
 
 			return iRegistry;
 

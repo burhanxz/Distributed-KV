@@ -6,8 +6,8 @@ import org.springframework.beans.factory.FactoryBean;
 
 import service.ComputeService;
 import service.ComputeServiceImpl;
-import zookeeper.IRegistry;
-import zookeeper.IRegistryFactory;
+import zookeeper.Registry;
+import zookeeper.RegistryFactory;
 
 /**
  * @author bird 服务订阅Bean
@@ -23,7 +23,7 @@ public class ServiceSubscribe<T> implements FactoryBean<T> {
 	@Override
 	public T getObject() throws Exception {
 		// 获取注册对象
-		IRegistry iRegistry = IRegistryFactory.getInstance().getZkRegistry(new InetSocketAddress("127.0.0.1", 3000));
+		Registry iRegistry = RegistryFactory.getInstance().getZkRegistry(new InetSocketAddress("127.0.0.1", 3000));
 		// 寻找可用服务
 		T stub = iRegistry.lookup(interfaceClazz);
 		return stub;

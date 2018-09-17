@@ -4,9 +4,10 @@ import java.net.InetSocketAddress;
 
 /**
  * @author bird
- * IRegistry类，用于产生代理对象，可进行代理对象	
+ * Registry类，用于产生代理对象，可进行代理对象
+ * 它屏蔽了底层对ZooKeeper的访问	
  */
-public interface IRegistry {
+public interface Registry {
 	
 	/**
 	 * @param serviceClazz 服务类

@@ -30,7 +30,7 @@ import service.NameService;
  * @author bird
  * ZooKeeper实现的IRegistry
  */
-public class ZooKeeperIRegistryImpl implements IRegistry, Watcher{
+public class ZooKeeperRegistryImpl implements Registry, Watcher{
 	/*ZooKeeper的地址*/
 	private InetSocketAddress zkAddress;
 	/*????*/
@@ -50,7 +50,7 @@ public class ZooKeeperIRegistryImpl implements IRegistry, Watcher{
 	 * @param address ZooKeeper连接地址
 	 * 构造器
 	 */
-	public ZooKeeperIRegistryImpl(InetSocketAddress address) {
+	public ZooKeeperRegistryImpl(InetSocketAddress address) {
 		this.zkAddress = address;
 //		this.invoker = CommonInvokerFactory.getInstance().get(address);
 	}
@@ -143,7 +143,7 @@ public class ZooKeeperIRegistryImpl implements IRegistry, Watcher{
 	public static void main(String[] args) {
 
 		try {
-			new ZooKeeperIRegistryImpl(new InetSocketAddress("127.0.0.1", 8080)).connect();
+			new ZooKeeperRegistryImpl(new InetSocketAddress("127.0.0.1", 8080)).connect();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
