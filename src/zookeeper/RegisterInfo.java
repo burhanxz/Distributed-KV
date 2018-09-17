@@ -15,9 +15,10 @@ public class RegisterInfo {
 	private int port;
 	private float weight;
 	private long timeout;
+	private Object implementClazz;
 	
 	public String toString() {
-		return JSON.toJSONString(this, SerializerFeature.WriteMapNullValue);
+		return JSON.toJSONString(this, SerializerFeature.WriteClassName);
 	}
 	
 	public Class<?> getInterfaceClazz() {
@@ -55,6 +56,14 @@ public class RegisterInfo {
 	}
 	public void setTimeout(long timeout) {
 		this.timeout = timeout;
+	}
+
+	public Object getImplementClazz() {
+		return implementClazz;
+	}
+
+	public void setImplementClazz(Object implementClazz) {
+		this.implementClazz = implementClazz;
 	}
 	
 	
