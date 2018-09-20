@@ -23,7 +23,7 @@ public class ServiceSubscribe<T> implements FactoryBean<T> {
 	@Override
 	public T getObject() throws Exception {
 		// 获取注册对象
-		Registry iRegistry = RegistryFactory.getInstance().getZkRegistry(new InetSocketAddress("127.0.0.1", 3000));
+		Registry iRegistry = RegistryFactory.getInstance().getZooKeeperRegistry();
 		// 寻找可用服务
 		T stub = iRegistry.lookup(interfaceClazz);
 		return stub;

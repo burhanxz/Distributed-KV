@@ -18,5 +18,5 @@ public interface Registry {
 	/**
 	 * @return 返回正在进行远程调用的IP地址和port
 	 */
-	public InetSocketAddress getRegisterAddress();
+	public <T> InetSocketAddress getServerAddress(Class<T> serviceClazz );
 }

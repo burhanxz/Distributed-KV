@@ -10,9 +10,13 @@ import org.apache.zookeeper.ZooKeeper;
  *
  */
 public class ZooKeeperMonitor implements Monitor,Watcher{
-	
+	private static final ZooKeeperMonitor instance = new ZooKeeperMonitor();
+	private ZooKeeperMonitor() {}
+	public static ZooKeeperMonitor getInstance() {
+		return instance;
+	}
 	@Override
-	public void initServiceList(String app, String service) {
+	public void initServiceList(Class<?> serviceInterfaceClazz) {
 		
 	}
 	@Override

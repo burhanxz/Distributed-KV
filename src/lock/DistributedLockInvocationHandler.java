@@ -24,7 +24,7 @@ public class DistributedLockInvocationHandler implements InvocationHandler{
 	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 		Object result = null;
 		//根据配置来选择分布式锁的实现方式
-		DistributedLock lock = (DistributedLock) Class.forName(Config.getDistributedLockImpl()).newInstance();
+		DistributedLock lock = (DistributedLock) Class.forName(Config.DISTRIBUTED_LOCK_IMPL).newInstance();
 		//锁序列化号码
 		String lockSerialNumber = null;
 		try {

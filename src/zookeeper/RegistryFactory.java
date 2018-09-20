@@ -30,25 +30,15 @@ public class RegistryFactory {
 	 *            根据地址来新建或取出已有的IRegistry
 	 * @return IRegistry对象
 	 */
-	public Registry getZkRegistry(InetSocketAddress address) {
+	public Registry getZooKeeperRegistry() {
 
-		if (!iRegistryMap.containsKey(address)) {
 
-			Registry iRegistry = new ZooKeeperRegistryImpl(address);
 
-			Registry iRegistryInMap = iRegistryMap.putIfAbsent(address, iRegistry);
+			Registry iRegistry = new ZooKeeperRegistryImpl();
 
-			if (iRegistryInMap != null) {
-				iRegistry = iRegistryInMap;
-			}
-			// 让注册机运行
-			((ZooKeeperRegistryImpl) iRegistry).run();
 
 			return iRegistry;
 
-		}
-
-		return iRegistryMap.get(address);
 
 	}
 }

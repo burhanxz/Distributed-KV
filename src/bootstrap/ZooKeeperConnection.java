@@ -1,4 +1,4 @@
-package init;
+package bootstrap;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
@@ -23,6 +23,8 @@ public class ZooKeeperConnection implements Watcher {
 	 * 执行connect方法时阻塞，收到ZooKeeper响应时释放
 	 */
 	private static final CountDownLatch latch = new CountDownLatch(WAIT_FOR_CONNECT_SUCCESS);
+	/* ZooKeeper参数，会话时间限制 */
+	private static final int SESSION_TIME = 2000;
 	/**
 	 * ZooKeeper连接对象
 	 */
@@ -36,13 +38,12 @@ public class ZooKeeperConnection implements Watcher {
 	 * 连接ZooKeeper
 	 */
 	private void connect() {
-		String host = "127.0.0.1";
-		int port = 2181;
+		String connectString = "127.0.0.1:2181";
 		try {
 			Log.logger.info("开始连接ZooKeeper...");
 			// 异步过程
 			// 创建ZooKeeper客户端，连接ZooKeeper服务器
-			zk = new ZooKeeper(host, port, this);
+			zk = new ZooKeeper(connectString, SESSION_TIME, this);
 			// 阻塞，直到process方法中释放锁
 			latch.await();
 		} catch (IOException | InterruptedException e) {

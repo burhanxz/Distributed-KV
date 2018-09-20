@@ -1,4 +1,4 @@
-package init;
+package bootstrap;
 
 /**
  * 微服务框架的启动类

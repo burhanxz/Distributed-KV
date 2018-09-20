@@ -26,7 +26,7 @@ public class RunTest {
 			Log.logger.info("run");
 			Registry iRegistry;
 			try {
-				iRegistry = RegistryFactory.getInstance().getZkRegistry(new InetSocketAddress("127.0.0.1", 3000));
+				iRegistry = RegistryFactory.getInstance().getZooKeeperRegistry();
 				
 				//测试代码中，应当在zookeeper后台注册好127.0.0.1:8080
 				NameService nameServiceStub = iRegistry.lookup(NameService.class);

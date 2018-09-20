@@ -15,8 +15,8 @@ import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
 
+import bootstrap.ZooKeeperConnection;
 import facet.Log;
-import init.ZooKeeperConnection;
 
 /**
  * 执行注册服务的动作
