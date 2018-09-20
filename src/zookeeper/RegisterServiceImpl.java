@@ -16,6 +16,7 @@ import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
 
 import facet.Log;
+import init.ZooKeeperConnection;
 
 /**
  * 执行注册服务的动作
@@ -23,26 +24,7 @@ import facet.Log;
  * @author bird
  *
  */
-public class RegisterServiceImpl implements RegisterService, Watcher {
-	/**
-	 * 锁的参数，等连接成功这一事件完成时释放锁
-	 */
-	private static int WAIT_FOR_CONNECT_SUCCESS = 1;
-	/**
-	 * zooKeeper连接对象
-	 */
-	private ZooKeeper zk;
-	/**
-	 * 执行connect方法时阻塞，收到ZooKeeper响应时释放
-	 */
-	private CountDownLatch latch = new CountDownLatch(WAIT_FOR_CONNECT_SUCCESS);
-	/**
-	 * 日志对象
-	 */
-	private Logger logger = Log.logger;
-	/**
-	 * 创建ZooKeeper目录时所设数据，为空字符串的比特数组
-	 */
+public class RegisterServiceImpl implements RegisterService{
 	private static final byte[] DIRECTORY_DATA = "".getBytes();
 	/**
 	 * servers目录是存放多个server信息的通用目录
@@ -52,30 +34,12 @@ public class RegisterServiceImpl implements RegisterService, Watcher {
 	 * 存放注册信息的叶节点名称"server"
 	 */
 	private static final String REGISTER_NODE_NAME = "server";
-
-	/*
-	 * @see zookeeper.RegisterService#connect(java.lang.String, int)
-	 */
-	@Override
-	public void connect(final String host, final int port) {
-		try {
-			// 异步过程
-			// 创建ZooKeeper客户端，连接ZooKeeper服务器
-			zk = new ZooKeeper(host, port, this);
-			// 阻塞，直到process方法中释放锁
-			latch.await();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-	}
-
 	/*
 	 * @see zookeeper.RegisterService#register(zookeeper.RegisterInfo)
 	 */
 	@Override
 	public void register(RegisterInfo registerInfo) {
+		ZooKeeper zk = ZooKeeperConnection.getInstance().getZooKeeper();
 		try {
 			// 判断application目录是否存在并设置
 			// application目录名是RegisterInfo类的application
@@ -112,27 +76,6 @@ public class RegisterServiceImpl implements RegisterService, Watcher {
 		}
 
 	}
-
-	@Override
-	public void process(WatchedEvent event) {
-		// 获取事件状态
-		// SyncConnected状态，表示和全体ZooKeeper服务器连接正常
-		if (event.getState() == Watcher.Event.KeeperState.SyncConnected) {
-			// 获取事件类型
-			EventType eventType = event.getType();
-			switch (eventType) {
-			// None事件可以表明连接成功
-			// 有争议
-			case None:
-				logger.info("connected to ZooKeeper!");
-				// 连接成功，结束阻塞的connect()方法
-				latch.countDown();
-				break;
-			}
-
-		}
-
-	}
 	//测试代码
 	public static void main(String[] args) {
 		RegisterInfo info = new RegisterInfo();
@@ -144,7 +87,6 @@ public class RegisterServiceImpl implements RegisterService, Watcher {
 		info.setTimeout(1000);
 		info.setWeight(0.3f);
 		RegisterService r = new RegisterServiceImpl();
-		r.connect("127.0.0.1", 2181);
 		r.register(info);
 		while (true) {
 

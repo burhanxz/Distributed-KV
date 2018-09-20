@@ -51,7 +51,7 @@ public class RedisDistributedLock implements DistributedLock{
 					return uuid;
 				}
 
-				// 给予redis操作时间，否则redis会操作错误
+				// 给予redis操作时间，防止反复使用setnx指令时出现不可知错误
 				try {
 					Thread.sleep(10);
 				} catch (InterruptedException e) {

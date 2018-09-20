@@ -34,7 +34,8 @@ public class RpcInvokeHandler implements InvocationHandler, Watcher, Runnable {
 		this.zk = zk;
 		this.serviceInterface = serviceInterface;
 	}
-
+	
+	
 	/**
 	 * 更新本地的服务列表
 	 * 
