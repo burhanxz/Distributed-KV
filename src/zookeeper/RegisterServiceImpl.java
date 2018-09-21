@@ -76,7 +76,7 @@ public class RegisterServiceImpl implements RegisterService{
 		}
 
 	}
-	//测试代码
+/*	//测试代码
 	public static void main(String[] args) {
 		RegisterInfo info = new RegisterInfo();
 		info.setApplication("app1");
@@ -120,4 +120,4 @@ class FooImpl implements Foo {
 		return null;
 	}
 
-}
+*/}
