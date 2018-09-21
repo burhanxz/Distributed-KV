@@ -19,6 +19,7 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooKeeper;
 
 import conf.Config;
+import redis.RedisKeyUtil;
 import redis.clients.jedis.Jedis;
 
 /**
@@ -48,8 +49,8 @@ public class ZooKeeperRegistryImpl implements Registry{
 	@Override
 	public <T> T lookup(Class<T> serviceClazz) {
 		// 检查redis中是否已经存有此服务的服务列表，如果没有，则通知monitor进行服务列表的初次拉取
-		//	to-do: redis名称待统一管理 
-		if (!conn.exists(Config.APP_NAME + ":" + serviceClazz.getName())) {
+		String serviceListKey = RedisKeyUtil.getServiceListKey(serviceClazz);
+		if (!conn.exists(serviceListKey)) {
 			//获取ZooKeeper监视器
 			Monitor monitor = ZooKeeperMonitor.getInstance();
 			//初始化相应的服务列表到redis

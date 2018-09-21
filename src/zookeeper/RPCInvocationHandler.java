@@ -28,6 +28,9 @@ public class RPCInvocationHandler implements InvocationHandler{
 	
 	@Override
 	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+		
+		/*此处获取Redis中服务列表的最优值，利用负载均衡*/
+		
 		//暂时设置
 		String host = "";
 		int port = 0;
