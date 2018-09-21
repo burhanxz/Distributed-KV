@@ -7,7 +7,7 @@ import redis.clients.jedis.JedisPoolConfig;
  * @author bird
  * jedispool作为redis连接池，避免了每次使用redis都新建redis连接，减少了开销
  */
-public class JedisPoolUtil {
+public class RedisPoolUtil {
 	private static JedisPool pool = null;
 
 	public static JedisPool getPool() {

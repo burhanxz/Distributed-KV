@@ -6,12 +6,12 @@ import java.lang.reflect.Proxy;
 import java.util.concurrent.CountDownLatch;
 
 import lock.RPCSecurity;
-import redis.JedisPoolUtil;
+import redis.RedisPoolUtil;
 
 public class RPCSecurityTest {
 
 	public static void main(String[] args) {
-		JedisPoolUtil.getPool().getResource().flushDB();
+		RedisPoolUtil.getPool().getResource().flushDB();
 		// 确保多个线程能同时运行
 		CountDownLatch latch = new CountDownLatch(1);
 		for (int i = 0; i != 10; i++) {

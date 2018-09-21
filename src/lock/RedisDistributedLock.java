@@ -2,7 +2,7 @@ package lock;
 
 import java.util.UUID;
 
-import redis.JedisPoolUtil;
+import redis.RedisPoolUtil;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.Transaction;
@@ -22,7 +22,7 @@ public class RedisDistributedLock implements DistributedLock{
 	// 最多尝试获取锁10000ms，防止死锁
 	private final static long tryGetLockTimeOut = 10000;
 
-	private final static JedisPool pool = JedisPoolUtil.getPool();
+	private final static JedisPool pool = RedisPoolUtil.getPool();
 
 	//static final Jedis 
 	
