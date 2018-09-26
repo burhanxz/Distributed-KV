@@ -19,13 +19,16 @@ public interface Cluster {
 	 * @return
 	 */
 	default public Cluster newCluster(Strategy strategy) {
+		Cluster cluster = null;
 		switch (strategy) {
 		case IPHash:
+			cluster = new IPHashCluster();
+			break;
 		case Polling:
 		default:
-
+			cluster = new IPHashCluster();
 		}
-		return null;
+		return cluster;
 	}
 
 	/**

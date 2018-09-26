@@ -5,7 +5,7 @@ import java.net.UnknownHostException;
 import java.util.SortedMap;
 
 public class IPHashCluster extends HashCluster {
-
+	protected IPHashCluster() {}
 	@Override
 	public String getNode(Class<?> serviceInterface) {
 		//初始化一致性hash环上的虚拟节点
