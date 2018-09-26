@@ -8,10 +8,10 @@ import java.util.List;
  */
 public interface Cluster {
 	/**
-	 * @param serverList
+	 * @param 
 	 * @return
 	 */
-	public ServerNode getNode(List<String> serverList);
+	public String getNode();
 
 	/**
 	 * to-do
