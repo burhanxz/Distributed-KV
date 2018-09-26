@@ -13,6 +13,7 @@ public class ServerNode {
 	 * 
 	 */
 	private int port;
+
 	/**
 	 * @param host
 	 * @param port
@@ -21,17 +22,23 @@ public class ServerNode {
 		this.host = host;
 		this.port = port;
 	}
+
 	/**
 	 * @return
 	 */
 	public String getHost() {
 		return host;
 	}
+
 	/**
 	 * @return
 	 */
 	public int getPort() {
 		return port;
-	}	
-}
+	}
 
+	@Override
+	public String toString() {
+		return host + ":" + port;
+	}
+}
