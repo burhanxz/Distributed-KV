@@ -11,7 +11,7 @@ public interface Cluster {
 	 * @param 
 	 * @return
 	 */
-	public String getNode();
+	public String getNode(Class<?> serviceInterface);
 
 	/**
 	 * to-do
@@ -35,4 +35,5 @@ public interface Cluster {
 	public enum Strategy {
 		IPHash, Polling
 	}
+
 }

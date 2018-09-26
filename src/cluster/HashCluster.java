@@ -3,6 +3,7 @@ package cluster;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.stream.IntStream;
 
@@ -20,9 +21,11 @@ public abstract class HashCluster implements Cluster {
 	/**
 	 * 利用有序的map存放虚拟节点
 	 */
-	protected Map<Integer, ServerNode> virtualNodes = new TreeMap<>();
+	protected SortedMap<Integer, ServerNode> virtualNodes = new TreeMap<>();
 
-	protected abstract String getKey(RegisterInfo info);
+	private String getHostKey(RegisterInfo info) {
+		return info.toString();
+	};
 
 	/**
 	 * BKDR 哈希算法
@@ -60,7 +63,7 @@ public abstract class HashCluster implements Cluster {
 			String host = info.getHost();
 			int port = info.getPort();
 			// 通过解析出来的RegisterInfo对象获取键
-			String key = getKey(info);
+			String key = getHostKey(info);
 			// 根据IP创建物理节点对象
 			ServerNode node = new ServerNode(host, port);
 			// 将物理节点对象放入物理节点列表中

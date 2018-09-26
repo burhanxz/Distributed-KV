@@ -1,5 +1,8 @@
 package conf;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
 /**
  * @author bird
  * （暂时）利用此类进行一些全局性配置 
@@ -21,4 +24,5 @@ public class Config {
 	 * app名称
 	 */
 	public static final String APP_NAME = "app1";
+
 }
