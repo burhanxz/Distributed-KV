@@ -21,10 +21,6 @@ public class RPCInvocationHandler implements InvocationHandler {
 	 */
 	private static Strategy CLUSTER_STRATEGY = Strategy.valueOf(Config.CLUSTER_STRATEGY);
 	/**
-	 * redis中存放服务列表信息的键
-	 */
-	private String serviceListKey;
-	/**
 	 * 服务类接口
 	 */
 	private Class<?> serviceInterface;
@@ -38,9 +34,8 @@ public class RPCInvocationHandler implements InvocationHandler {
 	}
 
 	public RPCInvocationHandler(Class<?> serviceInterface, Strategy clusterStrategy) {
-		serviceListKey = RedisKeyUtil.getServiceListKey(serviceInterface);
 		this.serviceInterface = serviceInterface;
-		/* 利用负载均衡机制，获取Redis中服务列表的最优值 */
+		//获取负载均衡器
 		cluster = Clusters.newCluster(clusterStrategy);
 	}
 
