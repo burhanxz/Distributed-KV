@@ -24,5 +24,7 @@ public class Config {
 	 * app名称
 	 */
 	public static final String APP_NAME = "app1";
+	
+	public static final String CLUSTER_STRATEGY = "IPHash";
 
 }
