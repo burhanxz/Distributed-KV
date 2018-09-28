@@ -1,4 +1,4 @@
-package client;
+package connector;
 
 import facet.Log;
 import io.netty.buffer.ByteBuf;

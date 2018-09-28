@@ -1,4 +1,4 @@
-package registry;
+package service;
 
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationHandler;
@@ -13,10 +13,12 @@ import org.apache.zookeeper.ZooKeeper;
 
 import com.alibaba.fastjson.JSON;
 
+import connector.CommonInvokerFactory;
+import connector.Invoker;
+
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 
-import client.CommonInvokerFactory;
-import client.Invoker;
+import registry.RegisterInfo;
 
 public class RpcInvokeHandler implements InvocationHandler, Watcher, Runnable {
 	/* ZooKeeper连接类对象 */

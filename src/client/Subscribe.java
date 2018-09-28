@@ -1,4 +1,4 @@
-package spring;
+package client;
 
 import java.net.InetSocketAddress;
 
@@ -13,11 +13,11 @@ import registry.RegistryFactory;
  * @author bird 服务订阅Bean
  * @param <T>
  */
-public class ServiceSubscribe<T> implements FactoryBean<T> {
+public class Subscribe<T> implements FactoryBean<T> {
 	/* 接口类 */
 	private Class<T> interfaceClazz;
 	/* 配置类，应当用来初始化iRegistry类对象 */
-	private ServiceSubscribeConfig config;
+	private SubscribeConfig config;
 
 	/* 返回代理类对象，由netty连接代理 */
 	@Override
@@ -52,11 +52,11 @@ public class ServiceSubscribe<T> implements FactoryBean<T> {
 		this.interfaceClazz = interfaceClazz;
 	}
 
-	public ServiceSubscribeConfig getConfig() {
+	public SubscribeConfig getConfig() {
 		return config;
 	}
 
-	public void setConfig(ServiceSubscribeConfig config) {
+	public void setConfig(SubscribeConfig config) {
 		this.config = config;
 	}
 }

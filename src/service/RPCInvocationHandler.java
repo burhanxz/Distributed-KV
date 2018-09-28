@@ -1,15 +1,15 @@
-package registry;
+package service;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 
-import client.CommonInvokerFactory;
-import client.Invoker;
 import cluster.Cluster;
 import cluster.Clusters;
 import cluster.Clusters.Strategy;
 import conf.Config;
+import connector.CommonInvokerFactory;
+import connector.Invoker;
 import redis.RedisKeyUtil;
 
 /**

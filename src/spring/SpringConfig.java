@@ -3,8 +3,11 @@ package spring;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import client.Subscribe;
+import client.SubscribeConfig;
 import provide.ComputeService;
 import provide.ComputeServiceImpl;
+import registry.Publish;
 
 /**
  * @author bird
@@ -20,19 +23,19 @@ public class SpringConfig {
 	 * 
 	 */
 	@Bean(name = "computeService")
-	public ServiceSubscribe<ComputeService> getComputeService() {
+	public Subscribe<ComputeService> getComputeService() {
 		// 新建一个ServiceSubscribe对象，即FactoryBean对象
-		ServiceSubscribe<ComputeService> subscribe = new ServiceSubscribe<ComputeService>();
+		Subscribe<ComputeService> subscribe = new Subscribe<ComputeService>();
 		// 设置接口class
 		subscribe.setInterfaceClazz(ComputeService.class);
 		// 配置ServiceSubscribe
-		subscribe.setConfig(new ServiceSubscribeConfig());
+		subscribe.setConfig(new SubscribeConfig());
 
-		return new ServiceSubscribe<ComputeService>();
+		return new Subscribe<ComputeService>();
 	}
 	@Bean(name = "computeService2")
-	public ServicePublish getComputeService2() {
-		ServicePublish ret = new ServicePublish();
+	public Publish getComputeService2() {
+		Publish ret = new Publish();
 		ret.setTimeout(1000);
 		ret.setServiceImpl(new ComputeServiceImpl());
 		ret.setServiceInterfaceClazz(ComputeService.class);

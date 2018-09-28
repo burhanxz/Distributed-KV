@@ -1,4 +1,4 @@
-package registry;
+package service;
 
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;

@@ -9,7 +9,7 @@ import java.util.stream.IntStream;
 
 import com.alibaba.fastjson.JSONObject;
 
-import host.ServerNode;
+import host.Host;
 import redis.RedisServiceManager;
 import registry.RegisterInfo;
 
@@ -18,11 +18,11 @@ public abstract class HashCluster implements Cluster {
 	/**
 	 * 存放服务器节点
 	 */
-	protected List<ServerNode> nodes = new ArrayList<>();
+	protected List<Host> nodes = new ArrayList<>();
 	/**
 	 * 利用有序的map存放虚拟节点
 	 */
-	protected SortedMap<Integer, ServerNode> virtualNodes = new TreeMap<>();
+	protected SortedMap<Integer, Host> virtualNodes = new TreeMap<>();
 
 	private String getHostKey(RegisterInfo info) {
 		return info.toString();
@@ -66,7 +66,7 @@ public abstract class HashCluster implements Cluster {
 			// 通过解析出来的RegisterInfo对象获取键
 			String key = getHostKey(info);
 			// 根据IP创建物理节点对象
-			ServerNode node = new ServerNode(host, port);
+			Host node = new Host(host, port);
 			// 将物理节点对象放入物理节点列表中
 			nodes.add(node);
 			// 创建virtualNodeSize个虚拟对象，均匀散布在大小为HASH_SIZE的hash环上

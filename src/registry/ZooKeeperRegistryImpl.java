@@ -21,6 +21,7 @@ import org.apache.zookeeper.ZooKeeper;
 import conf.Config;
 import redis.RedisKeyUtil;
 import redis.clients.jedis.Jedis;
+import service.RPCInvocationHandler;
 
 /**
  * @author bird ZooKeeper实现的IRegistry

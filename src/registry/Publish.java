@@ -1,4 +1,4 @@
-package spring;
+package registry;
 
 
 import org.springframework.beans.factory.InitializingBean;
@@ -7,7 +7,7 @@ import org.springframework.beans.factory.InitializingBean;
  * @author bird
  *
  */
-public class ServicePublish implements InitializingBean{
+public class Publish implements InitializingBean{
 
 	private Object serviceImpl;
 	

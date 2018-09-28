@@ -4,7 +4,7 @@ package host;
  * @author bird
  *
  */
-public class ServerNode {
+public class Host {
 	/**
 	 * 
 	 */
@@ -18,7 +18,7 @@ public class ServerNode {
 	 * @param host
 	 * @param port
 	 */
-	public ServerNode(String host, int port) {
+	public Host(String host, int port) {
 		this.host = host;
 		this.port = port;
 	}
