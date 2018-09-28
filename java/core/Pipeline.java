@@ -5,8 +5,6 @@ public interface Pipeline {
 	
 	public Valve removeValve();
 	
-	
-	
 //	public Valve setBasic();
 //	
 //	public Valve getBasic();
