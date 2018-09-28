@@ -1,4 +1,4 @@
-package zookeeper;
+package registry;
 
 /**
  * 代表注册服务的接口

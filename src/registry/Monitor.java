@@ -1,4 +1,4 @@
-package zookeeper;
+package registry;
 
 public interface Monitor {
 	/**

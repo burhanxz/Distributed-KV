@@ -1,4 +1,4 @@
-package zookeeper;
+package registry;
 
 import java.io.IOException;
 import java.util.List;

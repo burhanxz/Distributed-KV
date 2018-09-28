@@ -1,4 +1,4 @@
-package zookeeper;
+package registry;
 
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationHandler;

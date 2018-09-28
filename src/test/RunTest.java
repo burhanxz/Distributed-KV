@@ -9,8 +9,8 @@ import org.junit.Test;
 import facet.Log;
 import provide.ComputeService;
 import provide.NameService;
-import zookeeper.Registry;
-import zookeeper.RegistryFactory;
+import registry.Registry;
+import registry.RegistryFactory;
 
 public class RunTest {
 

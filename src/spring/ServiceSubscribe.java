@@ -6,8 +6,8 @@ import org.springframework.beans.factory.FactoryBean;
 
 import provide.ComputeService;
 import provide.ComputeServiceImpl;
-import zookeeper.Registry;
-import zookeeper.RegistryFactory;
+import registry.Registry;
+import registry.RegistryFactory;
 
 /**
  * @author bird 服务订阅Bean

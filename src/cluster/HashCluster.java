@@ -10,7 +10,7 @@ import java.util.stream.IntStream;
 import com.alibaba.fastjson.JSONObject;
 
 import redis.RedisServiceManager;
-import zookeeper.RegisterInfo;
+import registry.RegisterInfo;
 
 public abstract class HashCluster implements Cluster {
 	protected final static int HASH_SIZE = 1 << 30;
