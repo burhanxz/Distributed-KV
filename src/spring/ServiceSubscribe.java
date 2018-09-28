@@ -4,8 +4,8 @@ import java.net.InetSocketAddress;
 
 import org.springframework.beans.factory.FactoryBean;
 
-import service.ComputeService;
-import service.ComputeServiceImpl;
+import provide.ComputeService;
+import provide.ComputeServiceImpl;
 import zookeeper.Registry;
 import zookeeper.RegistryFactory;
 

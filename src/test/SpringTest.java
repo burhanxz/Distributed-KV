@@ -3,7 +3,7 @@ package test;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
-import service.ComputeService;
+import provide.ComputeService;
 import spring.SpringConfig;
 
 /**

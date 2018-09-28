@@ -1,4 +1,4 @@
-package service;
+package provide;
 
 public class NameServiceImpl implements NameService{
 

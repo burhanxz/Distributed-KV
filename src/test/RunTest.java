@@ -7,8 +7,8 @@ import java.util.Scanner;
 import org.junit.Test;
 
 import facet.Log;
-import service.ComputeService;
-import service.NameService;
+import provide.ComputeService;
+import provide.NameService;
 import zookeeper.Registry;
 import zookeeper.RegistryFactory;
 

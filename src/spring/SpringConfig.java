@@ -3,8 +3,8 @@ package spring;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import service.ComputeService;
-import service.ComputeServiceImpl;
+import provide.ComputeService;
+import provide.ComputeServiceImpl;
 
 /**
  * @author bird
