@@ -43,7 +43,7 @@ public class RPCInvocationHandler implements InvocationHandler {
 	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 
 		// 通过负载均衡器获取服务器节点
-		String addressStr = cluster.getNode(serviceInterface);
+		String addressStr = cluster.getHost(serviceInterface);
 		// 解析地址
 		String[] addressStrs = addressStr.split(":");
 		// 获取host和port

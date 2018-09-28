@@ -9,9 +9,9 @@ import host.Host;
 public class IPHashCluster extends HashCluster {
 	protected IPHashCluster() {}
 	@Override
-	public String getNode(Class<?> serviceInterface) {
+	public String getHost(Class<?> serviceInterface) {
 		//初始化一致性hash环上的虚拟节点
-		addNodes(serviceInterface);
+		addHost(serviceInterface);
 		
 		try {
 			//获取本机IP

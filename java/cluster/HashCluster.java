@@ -50,7 +50,7 @@ public abstract class HashCluster implements Cluster {
 	 * @param serviceInterface
 	 *            服务接口类
 	 */
-	protected void addNodes(Class<?> serviceInterface) {
+	protected void addHost(Class<?> serviceInterface) {
 		// 获取RedisServiceManager
 		RedisServiceManager manager = RedisServiceManager.getInstance();
 		// 从redis获取服务列表

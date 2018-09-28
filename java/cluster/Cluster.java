@@ -8,7 +8,8 @@ public interface Cluster {
 	 * @param 
 	 * @return
 	 */
-	public String getNode(Class<?> serviceInterface);
-
+	public String getHost(Class<?> serviceInterface);
+	
+	
 
 }
