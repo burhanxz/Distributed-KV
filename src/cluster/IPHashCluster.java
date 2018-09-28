@@ -4,6 +4,8 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.SortedMap;
 
+import host.ServerNode;
+
 public class IPHashCluster extends HashCluster {
 	protected IPHashCluster() {}
 	@Override

@@ -9,6 +9,7 @@ import java.util.stream.IntStream;
 
 import com.alibaba.fastjson.JSONObject;
 
+import host.ServerNode;
 import redis.RedisServiceManager;
 import registry.RegisterInfo;
 

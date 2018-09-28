@@ -1,4 +1,4 @@
-package cluster;
+package host;
 
 /**
  * @author bird
@@ -18,7 +18,7 @@ public class ServerNode {
 	 * @param host
 	 * @param port
 	 */
-	protected ServerNode(String host, int port) {
+	public ServerNode(String host, int port) {
 		this.host = host;
 		this.port = port;
 	}
