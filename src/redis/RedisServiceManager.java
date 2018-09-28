@@ -29,4 +29,11 @@ public class RedisServiceManager {
 			conn.close();
 		}
 	}
+	
+	public void updateServiceList(List<String> updateData) {
+		//此处应当更新redis数据
+		//
+	}
+	
+//	public void updateServiceListFlag() {}
 }
