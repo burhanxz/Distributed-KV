@@ -4,7 +4,6 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.SortedMap;
 
-import core.Valve;
 import host.Host;
 
 public class IPHashCluster extends HashCluster {
@@ -40,20 +39,6 @@ public class IPHashCluster extends HashCluster {
 		}
 		return null;
 	}
-	@Override
-	public boolean addValve() {
-		// TODO Auto-generated method stub
-		return false;
-	}
-	@Override
-	public Valve removeValve() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	@Override
-	public Valve firstValve() {
-		// TODO Auto-generated method stub
-		return null;
-	}
+
 
 }

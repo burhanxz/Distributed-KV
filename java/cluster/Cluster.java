@@ -1,12 +1,11 @@
 package cluster;
 
-import core.Pipeline;
 
 /**
  * @author bird
  *
  */
-public interface Cluster extends Pipeline{
+public interface Cluster{
 	/**
 	 * @param 
 	 * @return
