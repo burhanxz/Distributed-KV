@@ -108,5 +108,7 @@
 	<packaging>pom</packaging>
 	<modules>
 		<module>rpc</module>
+		<module>lsm</module>
+		<module>file-system</module>
 	</modules>
 </project>
