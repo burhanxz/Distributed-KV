@@ -1,7 +1,10 @@
 package lsm.internal;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -20,6 +23,7 @@ import lsm.VersionEdit;
 import lsm.VersionSet;
 import lsm.base.Compaction;
 import lsm.base.FileMetaData;
+import lsm.base.FileUtils;
 import lsm.base.InternalKey;
 import lsm.base.Options;
 import lsm.base.SeekingIteratorComparator;
@@ -82,7 +86,11 @@ public class Engine {
 					//TODO 还需考虑线程安全等情况
 					try {
 						backgroundCompaction();
-					} finally {
+					} 
+					catch(IOException e) {
+						e.printStackTrace();
+					}
+					finally {
 						// 再次触发compact
 						maybeCompaction();
 					}
@@ -93,7 +101,7 @@ public class Engine {
 		}
 	}
 	
-	private void backgroundCompaction() {
+	private void backgroundCompaction() throws IOException {
 		// 尝试序列化memtable，优先级最高
 		serializeMemTable();
 		// 获取compaction信息
@@ -112,8 +120,9 @@ public class Engine {
 	
 	/**
 	 * 在判断合适后，将memtable序列化成sstable
+	 * @throws IOException 
 	 */
-	private void serializeMemTable() {
+	private void serializeMemTable() throws IOException {
 		//TODO
 		// immutable memtable不存在或为空，则说明不需要序列化
 		if(immutableMemTable == null || immutableMemTable.isEmpty()) {
@@ -122,8 +131,35 @@ public class Engine {
 		SeekingIterator<InternalKey, ByteBuf> iter = immutableMemTable.iterator();
 		VersionEdit edit = new VersionEditImpl();
 		Version base = versions.getCurrent();
-		
+		// sst文件
 		long fileNumber = versions.getNextFileNumber();
+		File file = FileUtils.newSSTableFile(databaseDir, fileNumber);
+		FileChannel channel = new RandomAccessFile(file, "rw").getChannel();
+
+		// 最值
+		InternalKey smallest = null;
+		InternalKey largest = null;
+		
+		// TODO
+		SSTableBuilder tableBuilder = null;
+		
+		// 遍历迭代器
+		while(iter.hasNext()) {
+			Entry<InternalKey, ByteBuf> entry = iter.next();
+			InternalKey key = entry.getKey();
+			// 设置最值
+			if (smallest == null) {
+				smallest = key;
+			}
+			largest = key;
+			// 将数据加入table中
+			tableBuilder.add(entry);
+		}
+		// 完成table的构造
+		tableBuilder.finish();
+		// 获取sstable文件信息
+		FileMetaData fileMetaData = new FileMetaData(fileNumber, file.length(), smallest, largest);
+		// 更新version及versionEdit信息
 	}
 	
 	/**

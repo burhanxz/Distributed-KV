@@ -18,6 +18,11 @@ public class InternalKey implements Map.Entry<ByteBuf, Long>{
 		// TODO
 	}
 	
+	public ByteBuf encode() {
+		// TODO
+		return null;
+	}
+	
 	@Override
 	public ByteBuf getKey() {
 		return userKey;
