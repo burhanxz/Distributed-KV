@@ -26,4 +26,15 @@ public interface VersionSet {
 	 * @return
 	 */
 	public long getLastSequence();
+	
+	/**
+	 * 获取下一个文件编号
+	 * @return
+	 */
+	public long getNextFileNumber();
+	/**
+	 * 获取当前版本
+	 * @return
+	 */
+	public Version getCurrent();
 }

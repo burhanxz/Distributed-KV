@@ -6,10 +6,12 @@ import java.util.TreeMap;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 
+import io.netty.buffer.ByteBuf;
+import lsm.VersionEdit;
 import lsm.base.FileMetaData;
 import lsm.base.InternalKey;
 
-public class VersionEditImpl {
+public class VersionEditImpl implements VersionEdit{
 	/**
 	 * key comparator名字  
 	 */
@@ -34,5 +36,20 @@ public class VersionEditImpl {
 	private final Map<Integer, InternalKey> compactPointers = new TreeMap<>();
 	private final Multimap<Integer, FileMetaData> newFiles = ArrayListMultimap.create();
 	private final Multimap<Integer, Long> deletedFiles = ArrayListMultimap.create();
+	@Override
+	public ByteBuf encode() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	@Override
+	public void deleteFile(int level, long fileNumber) {
+		// TODO Auto-generated method stub
+		
+	}
+	@Override
+	public void addFile(int level, FileMetaData fileMetaData) {
+		// TODO Auto-generated method stub
+		
+	}
 
 }

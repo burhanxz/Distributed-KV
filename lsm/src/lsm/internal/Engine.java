@@ -15,6 +15,8 @@ import io.netty.buffer.ByteBuf;
 import lsm.MemTable;
 import lsm.SSTable;
 import lsm.SeekingIterator;
+import lsm.Version;
+import lsm.VersionEdit;
 import lsm.VersionSet;
 import lsm.base.Compaction;
 import lsm.base.FileMetaData;
@@ -113,6 +115,15 @@ public class Engine {
 	 */
 	private void serializeMemTable() {
 		//TODO
+		// immutable memtable不存在或为空，则说明不需要序列化
+		if(immutableMemTable == null || immutableMemTable.isEmpty()) {
+			return;
+		}
+		SeekingIterator<InternalKey, ByteBuf> iter = immutableMemTable.iterator();
+		VersionEdit edit = new VersionEditImpl();
+		Version base = versions.getCurrent();
+		
+		long fileNumber = versions.getNextFileNumber();
 	}
 	
 	/**
