@@ -36,4 +36,20 @@ public class FileMetaData {
 		this.largest = largest;
 	}
 
+	public long getNumber() {
+		return number;
+	}
+
+	public long getFileSize() {
+		return fileSize;
+	}
+
+	public InternalKey getSmallest() {
+		return smallest;
+	}
+
+	public InternalKey getLargest() {
+		return largest;
+	}
+
 }

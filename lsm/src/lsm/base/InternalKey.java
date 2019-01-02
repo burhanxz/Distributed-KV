@@ -13,7 +13,11 @@ public class InternalKey implements Map.Entry<ByteBuf, Long>{
 		this.userKey = userKey;
 		this.seq = seq;
 	}
-
+	
+	public InternalKey(ByteBuf byteBuf) {
+		// TODO
+	}
+	
 	@Override
 	public ByteBuf getKey() {
 		return userKey;
