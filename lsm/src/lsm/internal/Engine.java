@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -19,6 +20,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import io.netty.buffer.ByteBuf;
 import lsm.MemTable;
 import lsm.SSTable;
+import lsm.SSTableBuilder;
 import lsm.SeekingIterator;
 import lsm.Version;
 import lsm.VersionSet;
@@ -62,7 +64,10 @@ public class Engine {
 	private final ReentrantLock compactionLock = new ReentrantLock();
 	// 用作compaction的等待和唤醒
 	private final Condition backgroundCondition = compactionLock.newCondition();
-
+	/**
+	 * 一些待处理的无用文件，可能需要删除
+	 */
+	private final List<Long> pendingFileNumbers = new ArrayList<>();
 	public Engine(Options options, File databaseDir) {
 		// TODO
 		this.options = options;
@@ -111,6 +116,10 @@ public class Engine {
 		}
 	}
 
+	/**
+	 * 选择执行minor compaction或者major compaction
+	 * @throws IOException
+	 */
 	private void backgroundCompaction() throws IOException {
 		// 尝试序列化memtable，优先级最高
 		serializeMemTable();
@@ -134,31 +143,48 @@ public class Engine {
 	 * @throws IOException
 	 */
 	private void serializeMemTable() throws IOException {
-		// TODO
-		// immutable memtable不存在或为空，则说明不需要序列化
-		if (immutableMemTable == null || immutableMemTable.isEmpty()) {
-			return;
-		}
-		// 新建version和versionEdit
-		VersionEdit edit = new VersionEdit();
-		Version version = versions.getCurrent();
-		
-		FileMetaData fileMetaData = memToSSTable(immutableMemTable);
-		// 更新version及versionEdit信息
-		// 0层
-		int level = 0;
-		if (fileMetaData != null && fileMetaData.getFileSize() > 0) {
-			// 获取最值
-			ByteBuf minUserKey = fileMetaData.getSmallest().getKey();
-			ByteBuf maxUserKey = fileMetaData.getLargest().getKey();
-			if (version != null) {
-				level = version.pickLevelForMemTableOutput(minUserKey, maxUserKey);
+		// compaction加锁
+		compactionLock.lock();
+		try {
+			// immutable memtable不存在或为空，则说明不需要序列化
+			if (immutableMemTable == null || immutableMemTable.isEmpty()) {
+				return;
 			}
-			edit.addFile(level, fileMetaData);
+			// 新建version和versionEdit
+			VersionEdit edit = new VersionEdit();
+			Version version = versions.getCurrent();
+			// 将memTable中的数据持久化到sstable
+			FileMetaData fileMetaData = memToSSTable(immutableMemTable);
+			// 更新version及versionEdit信息
+			// 0层
+			int level = 0;
+			if (fileMetaData != null && fileMetaData.getFileSize() > 0) {
+				// 获取最值
+				ByteBuf minUserKey = fileMetaData.getSmallest().getKey();
+				ByteBuf maxUserKey = fileMetaData.getLargest().getKey();
+				if (version != null) {
+					level = version.pickLevelForMemTableOutput(minUserKey, maxUserKey);
+				}
+				// 增加文件信息
+				edit.addFile(level, fileMetaData);
+			}
+			// 设置日志编号
+			edit.setLogNumber(log.getFileNumber());
+			// 应用versionEdit
+			versions.logAndApply(edit);
+			// 清空immutableMemTable
+			immutableMemTable = null;
+			// 处理pending文件
+			handlePendingFiles();
+		} finally {
+			try {
+				// 唤醒等待compaction的线程
+				backgroundCondition.signalAll();
+			} finally {
+				// 释放compaction锁
+				compactionLock.unlock();
+			}
 		}
-		// 设置日志编号
-		edit.setLogNumber(log.getFileNumber());
-		versions.logAndApply(edit);
 	}
 
 	/**
@@ -260,6 +286,12 @@ public class Engine {
 		// TODO
 	}
 	
+	/**
+	 * memTable数据持久化到sstable
+	 * @param mem memTable
+	 * @return 持久化得到文件的信息
+	 * @throws IOException
+	 */
 	private FileMetaData memToSSTable(MemTable mem) throws IOException {
 		// 必须在compactionLock锁住的临界区中
 		if(!compactionLock.isHeldByCurrentThread()) {
@@ -304,5 +336,12 @@ public class Engine {
 		// 获取sstable文件信息
 		FileMetaData fileMetaData = new FileMetaData(fileNumber, file.length(), smallest, largest);
 		return fileMetaData;
+	}
+	
+	/**
+	 * 处理pending的file
+	 */
+	private void handlePendingFiles() {
+		//TODO
 	}
 }
