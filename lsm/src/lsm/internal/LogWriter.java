@@ -1,5 +1,10 @@
 package lsm.internal;
-// TODO
+
 public class LogWriter {
+
+	public long getFileNumber() {
+		// TODO
+		return 0;
+	}
 
 }

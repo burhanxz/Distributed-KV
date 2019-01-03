@@ -21,7 +21,6 @@ import lsm.MemTable;
 import lsm.SSTable;
 import lsm.SeekingIterator;
 import lsm.Version;
-import lsm.VersionEdit;
 import lsm.VersionSet;
 import lsm.base.Compaction;
 import lsm.base.FileMetaData;
@@ -140,38 +139,26 @@ public class Engine {
 		if (immutableMemTable == null || immutableMemTable.isEmpty()) {
 			return;
 		}
-		SeekingIterator<InternalKey, ByteBuf> iter = immutableMemTable.iterator();
-		VersionEdit edit = new VersionEditImpl();
-		Version base = versions.getCurrent();
-		// sst文件
-		long fileNumber = versions.getNextFileNumber();
-		File file = FileUtils.newSSTableFile(databaseDir, fileNumber);
-		FileChannel channel = new RandomAccessFile(file, "rw").getChannel();
-
-		// 最值
-		InternalKey smallest = null;
-		InternalKey largest = null;
-
-		// TODO
-		SSTableBuilder tableBuilder = null;
-
-		// 遍历迭代器
-		while (iter.hasNext()) {
-			Entry<InternalKey, ByteBuf> entry = iter.next();
-			InternalKey key = entry.getKey();
-			// 设置最值
-			if (smallest == null) {
-				smallest = key;
-			}
-			largest = key;
-			// 将数据加入table中
-			tableBuilder.add(entry);
-		}
-		// 完成table的构造
-		tableBuilder.finish();
-		// 获取sstable文件信息
-		FileMetaData fileMetaData = new FileMetaData(fileNumber, file.length(), smallest, largest);
+		// 新建version和versionEdit
+		VersionEdit edit = new VersionEdit();
+		Version version = versions.getCurrent();
+		
+		FileMetaData fileMetaData = memToSSTable(immutableMemTable);
 		// 更新version及versionEdit信息
+		// 0层
+		int level = 0;
+		if (fileMetaData != null && fileMetaData.getFileSize() > 0) {
+			// 获取最值
+			ByteBuf minUserKey = fileMetaData.getSmallest().getKey();
+			ByteBuf maxUserKey = fileMetaData.getLargest().getKey();
+			if (version != null) {
+				level = version.pickLevelForMemTableOutput(minUserKey, maxUserKey);
+			}
+			edit.addFile(level, fileMetaData);
+		}
+		// 设置日志编号
+		edit.setLogNumber(log.getFileNumber());
+		versions.logAndApply(edit);
 	}
 
 	/**
@@ -220,29 +207,46 @@ public class Engine {
 			SeekingIterator<ByteBuf, ByteBuf> iter = sstable.iterator();
 			sorter.add(iter);
 		});
-
-		// 记录上一个internalKey
-		InternalKey lastKey = null;
-		// 优先队列中至少需要两个迭代器
-		while (sorter.size() > 1) {
-			// 取出优先队列中的当前数据最小的迭代器
-			SeekingIterator<ByteBuf, ByteBuf> iter = sorter.poll();
-			// 取出迭代器当前位置数据，并移动到下一个位置
-			Entry<ByteBuf, ByteBuf> entry = iter.next();
-			InternalKey thisKey = new InternalKey(entry.getKey());
-			// 如果数据重复，抛弃，否则加入到sstable中
-			if (lastKey != null && lastKey.getKey().equals(thisKey.getKey())) {
-				// 抛弃
-			} else {
-				// 更新lastKey
-				lastKey = thisKey;
-				// 数据加入到sstable中
-				addToSSTable(entry);
-			}
-			// 如果迭代器到头了，则不放回，否则放回
-			if (iter.hasNext()) {
-				sorter.add(iter);
-			}
+		
+		// major compaction时释放锁
+		compactionLock.unlock();
+		try {
+			// 记录上一个internalKey
+			InternalKey lastKey = null;
+			// 优先队列中至少需要两个迭代器
+			while (sorter.size() > 1) {
+				
+				// memtable的序列化拥有最高优先级，因为需要保证用户能不断写入数据
+				compactionLock.lock();
+				try {
+					serializeMemTable();
+				} catch (IOException e) {
+					e.printStackTrace();
+				} finally {
+					compactionLock.unlock();
+				}
+				
+				// 取出优先队列中的当前数据最小的迭代器
+				SeekingIterator<ByteBuf, ByteBuf> iter = sorter.poll();
+				// 取出迭代器当前位置数据，并移动到下一个位置
+				Entry<ByteBuf, ByteBuf> entry = iter.next();
+				InternalKey thisKey = new InternalKey(entry.getKey());
+				// 如果数据重复，抛弃，否则加入到sstable中
+				if (lastKey != null && lastKey.getKey().equals(thisKey.getKey())) {
+					// 抛弃
+				} else {
+					// 更新lastKey
+					lastKey = thisKey;
+					// TODO 数据加入到sstable中
+					addToSSTable(entry);
+				}
+				// 如果迭代器到头了，则不放回，否则放回
+				if (iter.hasNext()) {
+					sorter.add(iter);
+				}
+			} 
+		} finally {
+			compactionLock.lock();
 		}
 
 	}
@@ -252,7 +256,53 @@ public class Engine {
 	 * 
 	 * @param entry
 	 */
-	public void addToSSTable(Entry<ByteBuf, ByteBuf> entry) {
+	private void addToSSTable(Entry<ByteBuf, ByteBuf> entry) {
 		// TODO
+	}
+	
+	private FileMetaData memToSSTable(MemTable mem) throws IOException {
+		// 必须在compactionLock锁住的临界区中
+		if(!compactionLock.isHeldByCurrentThread()) {
+			return null;
+		}
+		// 跳过空memtable
+		if (mem.isEmpty()) {
+			return null;
+		}
+		// 新建sst文件
+		long fileNumber = versions.getNextFileNumber();
+		File file = FileUtils.newSSTableFile(databaseDir, fileNumber);
+		FileChannel channel = new RandomAccessFile(file, "rw").getChannel();
+
+		// 最值
+		InternalKey smallest = null;
+		InternalKey largest = null;
+
+		// TODO
+		SSTableBuilder tableBuilder = null;
+
+		// 遍历迭代器
+		compactionLock.lock();
+		try {
+			SeekingIterator<InternalKey, ByteBuf> iter = mem.iterator();
+			while (iter.hasNext()) {
+				Entry<InternalKey, ByteBuf> entry = iter.next();
+				InternalKey key = entry.getKey();
+				// 设置最值
+				if (smallest == null) {
+					smallest = key;
+				}
+				largest = key;
+				// 将数据加入table中
+				tableBuilder.add(entry);
+			}
+			// 完成table的构造
+			tableBuilder.finish();
+		} finally {
+			compactionLock.unlock();
+		}
+		// 获取sstable文件信息
+		FileMetaData fileMetaData = new FileMetaData(fileNumber, file.length(), smallest, largest);
+		return fileMetaData;
 	}
 }

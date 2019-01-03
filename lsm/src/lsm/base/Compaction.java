@@ -3,7 +3,7 @@ package lsm.base;
 import java.util.List;
 
 import lsm.Version;
-import lsm.VersionEdit;
+import lsm.internal.VersionEdit;
 
 public class Compaction {
 	private final Version inputVersion;

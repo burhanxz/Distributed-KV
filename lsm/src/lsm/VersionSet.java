@@ -1,6 +1,7 @@
 package lsm;
 
 import lsm.base.Compaction;
+import lsm.internal.VersionEdit;
 
 public interface VersionSet {
 	/**
