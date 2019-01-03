@@ -13,6 +13,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 import io.netty.buffer.ByteBuf;
 import lsm.MemTable;
@@ -33,7 +35,7 @@ public class Engine {
 	 * 引擎基本配置
 	 */
 	private final Options options;
-	
+
 	/**
 	 * 引擎工作目录
 	 */
@@ -57,58 +59,67 @@ public class Engine {
 	private final ExecutorService compactionExecutor;
 	// 后台compaction异步操作
 	private Future<?> backgroundCompaction;
+	// 用作compaction的锁
+	private final ReentrantLock compactionLock = new ReentrantLock();
+	// 用作compaction的等待和唤醒
+	private final Condition backgroundCondition = compactionLock.newCondition();
 
-	
 	public Engine(Options options, File databaseDir) {
-		//TODO
+		// TODO
 		this.options = options;
 		this.databaseDir = databaseDir;
 		this.versions = null;
 		this.internalKeyComparator = null;
 		this.compactionExecutor = null;
 	}
-	
-	
+
 	/**
 	 * 尝试触发compact
 	 */
 	private void maybeCompaction() {
 		// 不应compact的判断
-		boolean shouldNotStartCompact = backgroundCompaction != null //上次后台合并未结束
-				|| shuttingDown.get() //系统关闭
-				|| (immutableMemTable == null && !versions.needsCompaction());// 在内存没有数据需要序列化的情况下，versionSet中未显示需要compact 
-		if(!shouldNotStartCompact) {
+		boolean shouldNotStartCompact = backgroundCompaction != null // 上次后台合并未结束
+				|| shuttingDown.get() // 系统关闭
+				|| (immutableMemTable == null && !versions.needsCompaction());// 在内存没有数据需要序列化的情况下，versionSet中未显示需要compact
+		if (!shouldNotStartCompact) {
 			// 启动compact线程
 			// 启动后台compaction线程
 			backgroundCompaction = compactionExecutor.submit(new Callable<Void>() {
 				@Override
 				public Void call() throws Exception {
-					//TODO 还需考虑线程安全等情况
+					compactionLock.lock();
 					try {
+						// 执行compaction
 						backgroundCompaction();
-					} 
-					catch(IOException e) {
+					} catch (IOException e) {
 						e.printStackTrace();
-					}
-					finally {
+					} finally {
 						// 再次触发compact
-						maybeCompaction();
+						try {
+							maybeCompaction();
+						} finally {
+							// 释放锁，唤醒等待compaction的线程
+							try {
+								backgroundCondition.signalAll();
+							} finally {
+								compactionLock.unlock();
+							}
+						}
 					}
-					
 					return null;
 				}
 			});
 		}
 	}
-	
+
 	private void backgroundCompaction() throws IOException {
 		// 尝试序列化memtable，优先级最高
 		serializeMemTable();
 		// 获取compaction信息
 		Compaction compaction = versions.pickCompaction();
-		if(compaction != null) {
+		if (compaction != null) {
 			// 是minor compact
-			if(compaction.isMinorCompaction()) {
+			if (compaction.isMinorCompaction()) {
 				minorCompact(compaction);
 			}
 			// 是major compact
@@ -117,15 +128,16 @@ public class Engine {
 			}
 		}
 	}
-	
+
 	/**
 	 * 在判断合适后，将memtable序列化成sstable
-	 * @throws IOException 
+	 * 
+	 * @throws IOException
 	 */
 	private void serializeMemTable() throws IOException {
-		//TODO
+		// TODO
 		// immutable memtable不存在或为空，则说明不需要序列化
-		if(immutableMemTable == null || immutableMemTable.isEmpty()) {
+		if (immutableMemTable == null || immutableMemTable.isEmpty()) {
 			return;
 		}
 		SeekingIterator<InternalKey, ByteBuf> iter = immutableMemTable.iterator();
@@ -139,12 +151,12 @@ public class Engine {
 		// 最值
 		InternalKey smallest = null;
 		InternalKey largest = null;
-		
+
 		// TODO
 		SSTableBuilder tableBuilder = null;
-		
+
 		// 遍历迭代器
-		while(iter.hasNext()) {
+		while (iter.hasNext()) {
 			Entry<InternalKey, ByteBuf> entry = iter.next();
 			InternalKey key = entry.getKey();
 			// 设置最值
@@ -161,10 +173,12 @@ public class Engine {
 		FileMetaData fileMetaData = new FileMetaData(fileNumber, file.length(), smallest, largest);
 		// 更新version及versionEdit信息
 	}
-	
+
 	/**
 	 * 执行minor compact
-	 * @param compaction compact信息
+	 * 
+	 * @param compaction
+	 *            compact信息
 	 */
 	private void minorCompact(Compaction compaction) {
 		FileMetaData fileMetaData = compaction.getLevelInputs().get(0);
@@ -172,9 +186,10 @@ public class Engine {
 		compaction.getEdit().addFile(compaction.getLevel() + 1, fileMetaData);
 		versions.logAndApply(compaction.getEdit());
 	}
-	
+
 	/**
 	 * 执行major compact
+	 * 
 	 * @param compaction
 	 */
 	private void majorCompact(Compaction compaction) {
@@ -185,8 +200,7 @@ public class Engine {
 		// 获取高一层level信息
 		List<FileMetaData> levelUpInputs = compaction.getLevelUpInputs();
 		// 建立优先队列的比较器
-		Comparator<SeekingIterator<ByteBuf, ByteBuf>> comparator = 
-				new SeekingIteratorComparator(internalKeyComparator);
+		Comparator<SeekingIterator<ByteBuf, ByteBuf>> comparator = new SeekingIteratorComparator(internalKeyComparator);
 		// 新建优先队列，优先队列以迭代器的当前元素大小来排序
 		int sorterSize = levelInputs.size() + levelUpInputs.size();
 		PriorityQueue<SeekingIterator<ByteBuf, ByteBuf>> sorter = new PriorityQueue(sorterSize, comparator);
@@ -206,40 +220,39 @@ public class Engine {
 			SeekingIterator<ByteBuf, ByteBuf> iter = sstable.iterator();
 			sorter.add(iter);
 		});
-		
+
 		// 记录上一个internalKey
 		InternalKey lastKey = null;
 		// 优先队列中至少需要两个迭代器
-		while(sorter.size() > 1) {
+		while (sorter.size() > 1) {
 			// 取出优先队列中的当前数据最小的迭代器
 			SeekingIterator<ByteBuf, ByteBuf> iter = sorter.poll();
 			// 取出迭代器当前位置数据，并移动到下一个位置
 			Entry<ByteBuf, ByteBuf> entry = iter.next();
 			InternalKey thisKey = new InternalKey(entry.getKey());
 			// 如果数据重复，抛弃，否则加入到sstable中
-			if(lastKey != null && lastKey.getKey().equals(thisKey.getKey())) {
+			if (lastKey != null && lastKey.getKey().equals(thisKey.getKey())) {
 				// 抛弃
-			}
-			else {
+			} else {
 				// 更新lastKey
 				lastKey = thisKey;
 				// 数据加入到sstable中
 				addToSSTable(entry);
 			}
 			// 如果迭代器到头了，则不放回，否则放回
-			if(iter.hasNext()) {
+			if (iter.hasNext()) {
 				sorter.add(iter);
 			}
 		}
 
-		
 	}
-	
+
 	/**
 	 * 加入数据到sstable中，当sstable大小达到限制则新建sstable
+	 * 
 	 * @param entry
 	 */
 	public void addToSSTable(Entry<ByteBuf, ByteBuf> entry) {
-		//TODO
+		// TODO
 	}
 }
