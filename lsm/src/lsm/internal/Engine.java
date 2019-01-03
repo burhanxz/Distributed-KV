@@ -318,7 +318,7 @@ public class Engine {
 		InternalKey largest = null;
 
 		// TODO
-		SSTableBuilder tableBuilder = new SSTableBuilderImpl();
+		SSTableBuilder tableBuilder = null;
 
 		compactionLock.lock();
 		try {
@@ -409,7 +409,7 @@ public class Engine {
 				File file = FileUtils.newSSTableFile(databaseDir, currentFileNumber);
 				channel = new RandomAccessFile(file, "rw").getChannel();
 				//TODO
-				builder = new SSTableBuilderImpl();
+				builder = null;
 			} finally {
 				compactionLock.unlock();
 			}

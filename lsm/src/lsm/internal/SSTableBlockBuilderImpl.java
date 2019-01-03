@@ -76,14 +76,15 @@ public class SSTableBlockBuilderImpl implements SSTableBlockBuilder{
 		count++;
 	}
 	
-	/**
-	 * 结束block builder，写入重启点位置和数量信息
-	 */
+	@Override
 	public void finish() {
+		// 写入重启点位置
 		restartPoints.forEach(i -> {
 			block.writeInt(i);
 		});
+		// 写入重启点数目
 		block.writeInt(restartPoints.size());
+		// TODO 写入block trailer信息
 	}
 	
 	/**
@@ -130,6 +131,16 @@ public class SSTableBlockBuilderImpl implements SSTableBlockBuilder{
 		ByteBufUtils.resetIndex(key);
 		ByteBufUtils.resetIndex(lastKey);
 		return len;
+	}
+
+	@Override
+	public int count() {
+		return count;
+	}
+
+	@Override
+	public int size() {
+		return block.readableBytes();
 	}
 
 
