@@ -26,6 +26,10 @@ public class Compaction {
 		this.edit = null;
 	}
 	
+	public void addInputDeletions(VersionEdit edit) {
+		//TODO
+	}
+	
 	public boolean isMinorCompaction() {
 		// TODO
 		return false;
@@ -57,6 +61,10 @@ public class Compaction {
 
 	public List<FileMetaData> getLevelUpInputs() {
 		return levelUpInputs;
+	}
+
+	public long getMaxOutputFileSize() {
+		return maxOutputFileSize;
 	}
 	
 }

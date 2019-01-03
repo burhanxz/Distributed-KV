@@ -31,4 +31,10 @@ public class SSTableBuilderImpl implements SSTableBuilder {
 		
 	}
 
+	@Override
+	public long getFileSize() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
 }

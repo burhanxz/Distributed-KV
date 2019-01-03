@@ -1,6 +1,7 @@
 package lsm.internal;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -189,7 +190,7 @@ public class Engine {
 
 	/**
 	 * 执行minor compact
-	 * 
+	 * 将文件移动到上面一层即可
 	 * @param compaction
 	 *            compact信息
 	 */
@@ -204,10 +205,11 @@ public class Engine {
 	 * 执行major compact
 	 * 
 	 * @param compaction
+	 * @throws IOException 
 	 */
-	private void majorCompact(Compaction compaction) {
-		// TODO
-		long lastSeq = versions.getLastSequence();
+	private void majorCompact(Compaction compaction) throws IOException {
+		// 新建major compaction helper
+		MajorCompactionHelper helper = new MajorCompactionHelper(compaction);
 		// 获取低一层level信息
 		List<FileMetaData> levelInputs = compaction.getLevelInputs();
 		// 获取高一层level信息
@@ -237,11 +239,10 @@ public class Engine {
 		// major compaction时释放锁
 		compactionLock.unlock();
 		try {
-			// 记录上一个internalKey
+			// 记录上一个internalKey，用来判断key是否重复
 			InternalKey lastKey = null;
 			// 优先队列中至少需要两个迭代器
 			while (sorter.size() > 1) {
-				
 				// memtable的序列化拥有最高优先级，因为需要保证用户能不断写入数据
 				compactionLock.lock();
 				try {
@@ -261,30 +262,36 @@ public class Engine {
 				if (lastKey != null && lastKey.getKey().equals(thisKey.getKey())) {
 					// 抛弃
 				} else {
+					// 不抛弃，处理数据
+					// 新建builder
+					if(!helper.hasBuilder()) {
+						helper.newSSTable();
+					}
+					// 插入数据到builder
+					helper.addToSSTable(entry.getKey(), entry.getValue());
+					// builder已满，则终止插入，重置builder
+					if(helper.isFull()) {
+						helper.finishSSTable();
+					}
 					// 更新lastKey
 					lastKey = thisKey;
-					// TODO 数据加入到sstable中
-					addToSSTable(entry);
+					
 				}
 				// 如果迭代器到头了，则不放回，否则放回
 				if (iter.hasNext()) {
 					sorter.add(iter);
 				}
-			} 
+			}
+			// 终止builder
+			helper.finishSSTable();
 		} finally {
 			compactionLock.lock();
 		}
-
+		//将新建文件信息加入到version中
+		helper.installSSTable();
 	}
 
-	/**
-	 * 加入数据到sstable中，当sstable大小达到限制则新建sstable
-	 * 
-	 * @param entry
-	 */
-	private void addToSSTable(Entry<ByteBuf, ByteBuf> entry) {
-		// TODO
-	}
+
 	
 	/**
 	 * memTable数据持久化到sstable
@@ -311,11 +318,11 @@ public class Engine {
 		InternalKey largest = null;
 
 		// TODO
-		SSTableBuilder tableBuilder = null;
+		SSTableBuilder tableBuilder = new SSTableBuilderImpl();
 
-		// 遍历迭代器
 		compactionLock.lock();
 		try {
+			// 遍历迭代器
 			SeekingIterator<InternalKey, ByteBuf> iter = mem.iterator();
 			while (iter.hasNext()) {
 				Entry<InternalKey, ByteBuf> entry = iter.next();
@@ -343,5 +350,124 @@ public class Engine {
 	 */
 	private void handlePendingFiles() {
 		//TODO
+	}
+	
+	/**
+	 * major compaction过程中的辅助类
+	 * @author bird
+	 */
+	private class MajorCompactionHelper{
+		private final Compaction compaction;
+		//compaction后输出的若干file
+		private final List<FileMetaData> fileMetaDatas = new ArrayList<>();
+		// 当前sstable
+		private FileChannel channel;
+		private SSTableBuilder builder;
+		// 当前文件信息
+		private long currentFileNumber;
+		private long currentFileSize;
+		private InternalKey currentSmallest;
+		private InternalKey currentLargest;
+		// 所有新建文件的总大小
+		private long totalBytes;
+		
+		MajorCompactionHelper(Compaction compaction){
+			this.compaction = compaction;
+		}
+		
+		/**
+		 * 检验是否存在builder
+		 * @return
+		 */
+		boolean hasBuilder() {
+			return builder == null;
+		}
+		/**
+		 * 判断sstable是否达到容量限制
+		 * @return
+		 */
+		boolean isFull() {
+			// 比较当前sstable文件大小和限制大小
+			return builder.getFileSize() >= compaction.getMaxOutputFileSize();
+		}
+		/**
+		 * 新建sstable
+		 * @throws IOException 
+		 */
+		void newSSTable() throws IOException {
+			compactionLock.lock();
+			try {
+				// 初始化文件信息
+				currentFileNumber = versions.getNextFileNumber();
+				pendingFileNumbers.add(currentFileNumber);
+				currentFileSize = 0;
+				currentSmallest = null;
+				currentLargest = null;
+				// 新建文件加入pending
+				pendingFileNumbers.add(currentFileNumber);
+				// 初始化sstable文件和sstable builder
+				File file = FileUtils.newSSTableFile(databaseDir, currentFileNumber);
+				channel = new RandomAccessFile(file, "rw").getChannel();
+				//TODO
+				builder = new SSTableBuilderImpl();
+			} finally {
+				compactionLock.unlock();
+			}
+		}
+		/**
+		 * 数据添加到sstable中
+		 * @param key 键
+		 * @param value 值
+ 		 */
+		void addToSSTable(ByteBuf key, ByteBuf value) {
+			// 更新最值
+			if(currentSmallest == null) {
+				currentSmallest = new InternalKey(key);
+			}
+			currentLargest = new InternalKey(key);
+			// 插入数据到sstable
+			builder.add(key, value);
+		}
+		/**
+		 * 完成sstable
+		 * @throws IOException 
+		 */
+		void finishSSTable() throws IOException {
+			if(builder == null)
+				return;
+			// 结束build
+			builder.finish();
+			// 更新文件信息
+			currentFileSize = builder.getFileSize();
+			totalBytes += currentFileSize;
+			// 整理文件信息
+			FileMetaData currentFileMetaData = new FileMetaData(currentFileNumber,currentFileSize, currentSmallest, currentLargest);
+			fileMetaDatas.add(currentFileMetaData);
+			// 清空builder
+			builder = null;
+			// fileChannel刷到硬盘，关闭channel并清空
+			channel.force(true);
+			channel.close();
+			channel = null;
+		}
+		/**
+		 * sstable信息记录到version中
+		 */
+		void installSSTable() {
+			VersionEdit edit = compaction.getEdit();
+			// 将刚刚参与归并的sstable文件作为待删除文件，加入到compaction中
+			compaction.addInputDeletions(compaction.getEdit());
+			int level = compaction.getLevel();
+			// 新建的文件应当加到更上一层中
+			for(FileMetaData newFile : fileMetaDatas) {
+				edit.addFile(level + 1, newFile);
+				// 从pending列表中移除
+				pendingFileNumbers.remove(newFile.getNumber());
+			}
+			//记录并且应用versionEdit
+			versions.logAndApply(edit);
+			// 删除失效文件
+			handlePendingFiles();
+		}
 	}
 }

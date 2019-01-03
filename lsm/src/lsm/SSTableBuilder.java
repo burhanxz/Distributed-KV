@@ -28,4 +28,10 @@ public interface SSTableBuilder {
 	 * 禁止再添加数据到builder中
 	 */
 	public void abandon();
+
+	/**
+	 * 获取当前文件实际大小
+	 * @return
+	 */
+	public long getFileSize();
 }
