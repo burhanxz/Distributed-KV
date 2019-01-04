@@ -6,7 +6,7 @@ import java.util.Map.Entry;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
-import lsm.SSTableBlockBuilder;
+import lsm.BlockBuilder;
 import lsm.SSTableBuilder;
 import lsm.base.InternalKey;
 
@@ -14,10 +14,9 @@ import lsm.base.InternalKey;
  * sstable典型格式:
  * |   data block  | 多个存放数据的block,存放用户(k,v)
  * |  index block  | 一个专门存放index的block，存放 (分界k, 索引块编码)
- * |  bloom filter | 多个bloom filter字节数组，数量和data block数量一致
+ * |   meta block  | 多个bloom filter字节数组，每2KB大小的data block对应一个bloom filter
  * |metaIndex block| 一个专门存放bloom filter index的block，存放 (filter名， filter位置)
  * |     Footer    | 指向各个分区的位置和大小
- * 
  * 
  * @author bird
  *
@@ -26,9 +25,9 @@ public class SSTableBuilderImpl implements SSTableBuilder {
 	private final int interval;
 	private final int blockSize;
 	private final FileChannel fileChannel;
-	private SSTableBlockBuilder dataBlock;
-	private SSTableBlockBuilder indexBlock; 
-	private SSTableBlockBuilder metaIndexBlock;
+	private BlockBuilder dataBlock;
+	private BlockBuilder indexBlock; 
+	private BlockBuilder metaIndexBlock;
 	private Footer footer;
 	
 	private volatile boolean shouldWriteIndexBlock = false;

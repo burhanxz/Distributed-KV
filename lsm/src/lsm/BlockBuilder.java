@@ -2,7 +2,7 @@ package lsm;
 
 import io.netty.buffer.ByteBuf;
 
-public interface SSTableBlockBuilder {
+public interface BlockBuilder {
 	public void add(ByteBuf key, ByteBuf value);
 	/**
 	 * 结束block builder，写入重启点位置和数量信息

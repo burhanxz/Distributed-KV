@@ -7,7 +7,7 @@ import java.util.List;
 import org.jboss.netty.util.internal.ByteBufferUtil;
 
 import io.netty.buffer.ByteBuf;
-import lsm.SSTableBlockBuilder;
+import lsm.BlockBuilder;
 import lsm.base.ByteBufUtils;
 
 /**
@@ -21,7 +21,7 @@ import lsm.base.ByteBufUtils;
  * @author bird
  *
  */
-public class SSTableBlockBuilderImpl implements SSTableBlockBuilder{
+public class BlockBuilderImpl implements BlockBuilder{
 	/**
      * interval数目个record进行公共前缀压缩（重启点机制）
      */
@@ -37,7 +37,7 @@ public class SSTableBlockBuilderImpl implements SSTableBlockBuilder{
     
     private ByteBuf block;
     
-	public SSTableBlockBuilderImpl(int interval) {
+	public BlockBuilderImpl(int interval) {
 		this.interval = interval;
 		// TODO
 		this.block = null;

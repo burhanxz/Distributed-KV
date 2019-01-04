@@ -2,7 +2,7 @@ package lsm;
 
 import io.netty.buffer.ByteBuf;
 
-public interface SSTableBlock extends SeekingIterable<ByteBuf, ByteBuf> {
+public interface Block extends SeekingIterable<ByteBuf, ByteBuf> {
 	/**
 	 * block中的record的数目*
 	 * 
