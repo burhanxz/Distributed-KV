@@ -44,8 +44,13 @@ public class BloomFilter implements FilterPolicy{
 		int bitSetSize = (int) Math.ceil(bitPerKey * keys.length);
 		// 新建bitSet
 		BitSet bitset = new BitSet(bitSetSize);
-		
-		return null;
+		// 将所有key投影到到bitset中去
+		for(ByteBuf key : keys) {
+			add(bitset, key, bitSetSize);
+		}
+		// 根据bitset生成bytebuf作为最终结果
+		ByteBuf ret = bitSetToResult(bitset, bitSetSize);
+		return ret;
 	}
 
 	@Override
@@ -61,14 +66,26 @@ public class BloomFilter implements FilterPolicy{
 	 * @param bitsetSize bitset实际大小
 	 */
 	private void add(BitSet bitset, ByteBuf key, int bitsetSize) {
-		ByteBufUtils.markIndex(key);
+		// 记录当前位置
 		int writerIndex = key.writerIndex();
+		// TODO 可优化
+		byte[] data = new byte[key.readableBytes() + Integer.BYTES];
 		// 映射k次
 		for (int x = 0; x < k; x++) {
+			ByteBufUtils.markIndex(key);
 			// 将k组装到key的末尾
 			key.setInt(writerIndex, k);
+			// 将key中的字节读入数组
+			key.readBytes(data);
+			// 生成hash数据
+			long hash = createHash(data);
+			hash = hash % (long) bitsetSize;
+			// 将hash数据加入到bitset中
+			bitset.set(Math.abs((int) hash), true);
+			// 恢复key
+			ByteBufUtils.resetIndex(key);
 		}
-		ByteBufUtils.resetIndex(key);
+		
 	}
 	
 	/**
@@ -100,5 +117,22 @@ public class BloomFilter implements FilterPolicy{
 		return ret;
 	}
 	
-	
+	/**
+	 * MD5算法生成hash值
+	 * @param data
+	 * @return
+	 */
+	public long createHash(byte[] data) {
+		long h = 0;
+		byte[] res;
+		synchronized (digestFunction) {
+			res = digestFunction.digest(data);
+		}
+		for (int i = 0; i < 4; i++) {
+			h <<= 8;
+			h |= ((int) res[i]) & 0xFF;
+		}
+		return h;
+	}
+
 }
