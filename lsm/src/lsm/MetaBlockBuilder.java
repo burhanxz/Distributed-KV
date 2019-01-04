@@ -10,8 +10,8 @@ import io.netty.buffer.ByteBuf;
  */
 public interface MetaBlockBuilder {
 	/**
-	 * 新开始记录一个meta block
-	 * @param blockOffset 当前data block在sstable中的offset
+	 * 记录前一个data block的filter信息
+	 * @param blockOffset 下一个data block的offset
 	 */
 	public void startBlock(int blockOffset);
 	/**

@@ -56,7 +56,7 @@ public class MetaBlockImpl implements MetaBlock{
 		int n = blockOffset >> kFilterBaseLg;
 		// TODO 此处需要验证. 获取有效filter数据
 		// filter终止位置
-		int filterEndOffset = filterOffsets[n - 1];
+		int filterEndOffset = filterOffsets[n];
 		// 寻找第一个不和终止位置相同的filter offset作为起始位置
 		int filterStartOffset = 0;
 		for(int i = n - 1; i > 0; i--) {
@@ -72,7 +72,4 @@ public class MetaBlockImpl implements MetaBlock{
 		return exists;
 	}
 	
-	
-
-
 }

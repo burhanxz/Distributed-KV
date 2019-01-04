@@ -3,6 +3,7 @@ package lsm.internal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.zip.CRC32;
 
 import org.jboss.netty.util.internal.ByteBufferUtil;
 
@@ -22,6 +23,10 @@ import lsm.base.ByteBufUtils;
  *
  */
 public class BlockBuilderImpl implements BlockBuilder{
+	/**
+	 * 用于生成校验和
+	 */
+	private static final CRC32 crc32 = new CRC32();
 	/**
      * interval数目个record进行公共前缀压缩（重启点机制）
      */
@@ -77,14 +82,19 @@ public class BlockBuilderImpl implements BlockBuilder{
 	}
 	
 	@Override
-	public void finish() {
+	public ByteBuf finish() {
 		// 写入重启点位置
 		restartPoints.forEach(i -> {
 			block.writeInt(i);
 		});
 		// 写入重启点数目
 		block.writeInt(restartPoints.size());
-		// TODO 写入block trailer信息
+		// 写入block trailer信息,即crc32校验和
+		crc32.reset();
+		crc32.update(block.array(), block.readerIndex(), block.writerIndex());
+		long crc32Ret = crc32.getValue();
+		block.writeLong(crc32Ret);
+		return block;
 	}
 	
 	/**
@@ -113,6 +123,7 @@ public class BlockBuilderImpl implements BlockBuilder{
 	 * @return
 	 */
 	private int sharedLen(ByteBuf lastKey, ByteBuf key) {
+		//TODO 待验证
 		ByteBufUtils.markIndex(key);
 		ByteBufUtils.markIndex(lastKey);
 		int minLen = Math.min(lastKey.readableBytes(), key.readableBytes());

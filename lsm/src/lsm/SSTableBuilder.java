@@ -24,8 +24,9 @@ public interface SSTableBuilder {
 	
 	/**
 	 * 结束添加数据到builder中
+	 * @throws IOException 
 	 */
-	public void finish();
+	public void finish() throws IOException;
 	
 	/**
 	 * 禁止再添加数据到builder中
