@@ -1,9 +1,11 @@
 package lsm.internal;
 
+import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.util.Map.Entry;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import lsm.SSTableBlockBuilder;
 import lsm.SSTableBuilder;
 import lsm.base.InternalKey;
@@ -28,22 +30,49 @@ public class SSTableBuilderImpl implements SSTableBuilder {
 	private SSTableBlockBuilder indexBlock; 
 	private SSTableBlockBuilder metaIndexBlock;
 	private Footer footer;
-
+	
+	private volatile boolean shouldWriteIndexBlock = false;
+	private volatile int lastBlockSize;
+	
 	public SSTableBuilderImpl(int interval, int blockSize, FileChannel fileChannel) {
-		super();
 		this.interval = interval;
 		this.blockSize = blockSize;
 		this.fileChannel = fileChannel;
+		// TODO
 	}
 	
 	@Override
-	public void add(Entry<InternalKey, ByteBuf> entry) {
+	public void add(Entry<InternalKey, ByteBuf> entry) throws IOException {
 		add(entry.getKey().encode(), entry.getValue());
 	}
 
 	@Override
-	public void add(ByteBuf key, ByteBuf value) {
-		// TODO Auto-generated method stub
+	public void add(ByteBuf key, ByteBuf value) throws IOException {
+		// 在写完一个data block之后，新写一个data block之前，写index block
+		if(shouldWriteIndexBlock) {
+			// TODO 计算分界key
+			ByteBuf divide = null;
+			// 生成索引块
+			long offset = fileChannel.position();
+			int size = lastBlockSize;
+			// TODO 申请内存
+			ByteBuf index = PooledByteBufAllocator.DEFAULT.buffer(Long.BYTES + Integer.BYTES);
+			index.writeLong(offset);
+			index.writeInt(size);
+			// 写入到index block
+			indexBlock.add(divide, index);
+			// TODO 重置
+			shouldWriteIndexBlock = !shouldWriteIndexBlock;
+			dataBlock = null;
+		}
+		// 向data block中添加数据
+		dataBlock.add(key, value);
+		// 判断data block大小是否达到限制，同时更新last block size
+		if((lastBlockSize = dataBlock.size()) >= blockSize) {
+			// TODO 将data block持久化到filechannel
+			// 指示下一步应当写index block
+			shouldWriteIndexBlock = true;
+		}
 
 	}
 

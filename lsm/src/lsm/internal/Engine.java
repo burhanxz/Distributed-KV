@@ -418,8 +418,9 @@ public class Engine {
 		 * 数据添加到sstable中
 		 * @param key 键
 		 * @param value 值
+		 * @throws IOException 
  		 */
-		void addToSSTable(ByteBuf key, ByteBuf value) {
+		void addToSSTable(ByteBuf key, ByteBuf value) throws IOException {
 			// 更新最值
 			if(currentSmallest == null) {
 				currentSmallest = new InternalKey(key);
