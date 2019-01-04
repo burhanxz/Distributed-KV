@@ -55,8 +55,16 @@ public class MetaBlockBuilderImpl implements MetaBlockBuilder{
 
 	@Override
 	public ByteBuf finish() {
-		// TODO Auto-generated method stub
-		return null;
+		int filtersSize = result.readableBytes();
+		// 将filter offsets信息加入result
+		filterOffsets.forEach(i -> {
+			result.writeInt(i);
+		});
+		// 将filter总大小信息加入result
+		result.writeInt(filtersSize);
+		// 将kFilterBaseLg信息加入到result
+		result.writeInt(kFilterBaseLg);
+		return result;
 	}
 
 	/**
