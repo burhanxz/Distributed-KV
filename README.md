@@ -1,5 +1,7 @@
-# MicroServices-Framework
-
+# Distributed-KV
+## lsm部分
+- 待续
+## rpc部分
 - one can use this middleware like using java rmi;
 - client pool and long-term connection; 
 - client heartbeat and reconnect machanism，TCP stick package problem solved;
