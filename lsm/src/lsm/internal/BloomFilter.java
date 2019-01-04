@@ -55,8 +55,36 @@ public class BloomFilter implements FilterPolicy{
 
 	@Override
 	public boolean keyMayMatch(ByteBuf key, ByteBuf filter) {
-		// TODO Auto-generated method stub
-		return false;
+		// filter信息的末尾是bitset大小信息
+		int retSize = filter.readableBytes() - Integer.BYTES;
+		int bitsetSize = filter.getInt(filter.readerIndex() + retSize);
+		// 实际有效filter信息
+		ByteBuf realFilter = filter.slice(filter.readerIndex(), retSize);
+		// 记录当前位置
+		int writerIndex = key.writerIndex();
+		// TODO 可优化. 建立byte数组，盛放key和附加k
+		byte[] data = new byte[key.readableBytes() + Integer.BYTES];
+		// 映射k次
+		for (int x = 0; x < k; x++) {
+			ByteBufUtils.markIndex(key);
+			// 将k组装到key的末尾
+			key.setInt(writerIndex, k);
+			// 将key中的字节读入数组
+			key.readBytes(data);
+			// 生成hash数据
+			long hash = createHash(data);
+			hash = hash % (long) bitsetSize;
+			// 根据hash数据和filter信息，替代bitset来检验key的存在
+			int index = Math.abs((int) hash);
+			int i = index / 8;
+			int j = 7 - index % 8;
+			boolean ret = (realFilter.getByte(i) & (1 << j)) >> j == 1 ? true : false;
+			if (!ret)
+				return false;
+			// 恢复key
+			ByteBufUtils.resetIndex(key);
+		}
+		return true;
 	}
 	
 	/**
