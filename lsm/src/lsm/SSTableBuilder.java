@@ -36,6 +36,7 @@ public interface SSTableBuilder {
 	/**
 	 * 获取当前文件实际大小
 	 * @return
+	 * @throws IOException 
 	 */
-	public long getFileSize();
+	public long getFileSize() throws IOException;
 }

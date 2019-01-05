@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -195,6 +196,7 @@ public class Engine {
 	 *            compact信息
 	 */
 	private void minorCompact(Compaction compaction) {
+		Objects.requireNonNull(compaction);
 		FileMetaData fileMetaData = compaction.getLevelInputs().get(0);
 		compaction.getEdit().deleteFile(compaction.getLevel(), fileMetaData.getNumber());
 		compaction.getEdit().addFile(compaction.getLevel() + 1, fileMetaData);
@@ -208,6 +210,7 @@ public class Engine {
 	 * @throws IOException 
 	 */
 	private void majorCompact(Compaction compaction) throws IOException {
+		Objects.requireNonNull(compaction);
 		// 新建major compaction helper
 		MajorCompactionHelper helper = new MajorCompactionHelper(compaction);
 		// 获取低一层level信息
@@ -242,7 +245,7 @@ public class Engine {
 			// 记录上一个internalKey，用来判断key是否重复
 			InternalKey lastKey = null;
 			// 优先队列中至少需要两个迭代器
-			while (sorter.size() > 1) {
+			while (sorter.size() > 0) {
 				// memtable的序列化拥有最高优先级，因为需要保证用户能不断写入数据
 				compactionLock.lock();
 				try {
@@ -385,8 +388,9 @@ public class Engine {
 		/**
 		 * 判断sstable是否达到容量限制
 		 * @return
+		 * @throws IOException 
 		 */
-		boolean isFull() {
+		boolean isFull() throws IOException {
 			// 比较当前sstable文件大小和限制大小
 			return builder.getFileSize() >= compaction.getMaxOutputFileSize();
 		}

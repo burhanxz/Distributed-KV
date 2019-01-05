@@ -5,6 +5,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Map.Entry;
 
+import com.google.common.base.Preconditions;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import lsm.BlockBuilder;
@@ -34,10 +36,11 @@ public class SSTableBuilderImpl implements SSTableBuilder {
 	private MetaBlockBuilder metaBlock;
 	private BlockBuilder indexBlock; 
 	private BlockBuilder metaIndexBlock;
-	private Footer footer;
 	
 	private volatile boolean finishDataBlock = false;
 	private volatile int lastBlockSize;
+
+	private volatile boolean isFinished = false;
 	
 	public SSTableBuilderImpl(int interval, int blockSize, FileChannel fileChannel) {
 		this.interval = interval;
@@ -53,6 +56,7 @@ public class SSTableBuilderImpl implements SSTableBuilder {
 
 	@Override
 	public void add(ByteBuf key, ByteBuf value) throws IOException {
+		Preconditions.checkState(!isFinished, "builder过程已经结束");
 		// 在写完一个data block之后，新写一个data block之前，写index block
 		if(finishDataBlock) {
 			handleBlock();
@@ -112,6 +116,7 @@ public class SSTableBuilderImpl implements SSTableBuilder {
 	 * @return handle的字节数据
 	 */
 	private ByteBuf getHandle(int offset, int size) {
+		Preconditions.checkArgument(offset >= 0 && size >= 0);
 		ByteBuf handle = PooledByteBufAllocator.DEFAULT.buffer(2 * Long.BYTES);
 		handle.writeInt(offset);
 		handle.writeInt(size);
@@ -147,7 +152,7 @@ public class SSTableBuilderImpl implements SSTableBuilder {
 		ByteBufUtils.write(fileChannel, metaIndexBlockBytes);
 
 		// 获取填充数据
-		ByteBuf padding = PooledByteBufAllocator.DEFAULT.buffer(40 - indexBlockHandle.readableBytes() - metaIndexBlockHandle.readableBytes());
+		ByteBuf padding = PooledByteBufAllocator.DEFAULT.buffer(PADDING_CONSTANTS - indexBlockHandle.readableBytes() - metaIndexBlockHandle.readableBytes());
 		// 获取魔数
 		ByteBuf magic = PooledByteBufAllocator.DEFAULT.buffer(2 * Integer.BYTES);
 		magic.writeInt((int) MAGIC_NUMBER);
@@ -157,18 +162,18 @@ public class SSTableBuilderImpl implements SSTableBuilder {
 		ByteBufUtils.write(fileChannel, metaIndexBlockHandle);
 		ByteBufUtils.write(fileChannel, padding);
 		ByteBufUtils.write(fileChannel, magic);
+		// 修改结束标志
+		isFinished = true;
 	}
 
 	@Override
 	public void abandon() {
-		// TODO Auto-generated method stub
-		
+		isFinished = true;
 	}
 
 	@Override
-	public long getFileSize() {
-		// TODO Auto-generated method stub
-		return 0;
+	public long getFileSize() throws IOException {
+		return fileChannel.size();
 	}
 
 	
