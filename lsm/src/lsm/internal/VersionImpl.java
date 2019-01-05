@@ -1,10 +1,14 @@
 package lsm.internal;
 
-import java.util.List;
+import io.netty.buffer.ByteBuf;
+import lsm.Version;
 
-import lsm.VersionSet;
-import lsm.base.FileMetaData;
+public class VersionImpl implements Version{
 
-public class VersionImpl {
+	@Override
+	public int pickLevelForMemTableOutput(ByteBuf smallest, ByteBuf largest) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
 
 }
