@@ -1,7 +1,5 @@
 package lsm.base;
 
-import java.util.Map;
-
 import com.google.common.base.Preconditions;
 
 import io.netty.buffer.ByteBuf;
@@ -67,6 +65,7 @@ public class InternalKey{
 	 * @param byteBuf byteBuf 字节数据
 	 * @return internal key对象
 	 */
+	@Deprecated
 	public static InternalKey decodeWithPrefix(ByteBuf bytebuf) {
 		Preconditions.checkNotNull(bytebuf);
 		
@@ -99,6 +98,7 @@ public class InternalKey{
 	 * 在序列化数据开始的地方写入大小信息作为前缀
 	 * @return
 	 */
+	@Deprecated
 	public ByteBuf encodeWithPrefix() {
 		ByteBuf buff = PooledByteBufAllocator.DEFAULT.buffer(Integer.BYTES + userKey.readableBytes() + Long.BYTES);
 		// 首先写入userkey和info总大小来作为前缀

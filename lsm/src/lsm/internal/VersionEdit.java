@@ -22,9 +22,9 @@ import lsm.base.InternalKey;
  * comparator name结构:
  * | name string length(4B) | name string |
  * compact pointer结构(多个):
- * | level(4B) | InternalKey(见InternalKey序列化结构) |
+ * | level(4B) | Internal key 长度 | InternalKey(见InternalKey序列化结构) |
  * new file结构(多个):
- * | level(4B) | fileMetaData(见fileMetaData序列化结构) |
+ * | level(4B) | fileMetaData 长度 | fileMetaData(见fileMetaData序列化结构) |
  * @author bird
  *
  */
@@ -72,7 +72,9 @@ public class VersionEdit{
 		// 序列化compact pointers
 		compactPointers.forEach((level, key) -> {
 			buff.writeInt(level);
-			buff.writeBytes(key.encodeWithPrefix());
+			ByteBuf keyBuffer = key.encode();
+			buff.writeInt(keyBuffer.readableBytes());
+			buff.writeBytes(keyBuffer);
 		});
 		// 序列化delete files
 		deletedFiles.forEach((level, fileNumber) -> {
@@ -82,7 +84,9 @@ public class VersionEdit{
 		// 序列化new files
 		newFiles.forEach((level, fileMetaData) -> {
 			buff.writeInt(level);
-			buff.writeBytes(fileMetaData.encode());
+			ByteBuf fileMetaDataBuffer = fileMetaData.encode();
+			buff.writeInt(fileMetaDataBuffer.readableBytes());
+			buff.writeBytes(fileMetaDataBuffer);
 		});
 		return buff;
 	}

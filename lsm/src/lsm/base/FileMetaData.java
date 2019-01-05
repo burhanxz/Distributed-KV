@@ -3,7 +3,14 @@ package lsm.base;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 
+/**
+ * fileMetaData序列化格式
+ * | number(8B) | fileSize(8B) | smallest size(4B) | smallest | largest size(4B) | largest |
+ * @author bird
+ *
+ */
 public class FileMetaData {
     /**
      * .sst文件编号
@@ -38,8 +45,20 @@ public class FileMetaData {
 		this.largest = largest;
 	}
 	
+	/**
+	 * 严格按照file meta data格式序列化
+	 * @return
+	 */
 	public ByteBuf encode() {
-		// TODO
+		ByteBuf smallestKeyBuffer = smallest.encode();
+		ByteBuf largestKeyBuffer = largest.encode();
+		ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer(Long.BYTES * 2 + Integer.BYTES * 2 + smallestKeyBuffer.readableBytes() + largestKeyBuffer.readableBytes());
+		buffer.writeLong(number);
+		buffer.writeLong(fileSize);
+		buffer.writeInt(smallestKeyBuffer.readableBytes());
+		buffer.writeBytes(smallestKeyBuffer);
+		buffer.writeInt(largestKeyBuffer.readableBytes());
+		buffer.writeBytes(largestKeyBuffer);
 		return null;
 	}
 
