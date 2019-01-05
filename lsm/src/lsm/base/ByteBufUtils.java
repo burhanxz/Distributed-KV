@@ -5,8 +5,10 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 
 public class ByteBufUtils {
+		
 	public static void write(FileChannel channel, ByteBuf buffer) throws IOException {
 		// 建立bytebuffer以便写入文件
 		ByteBuffer tmpBuffer = ByteBuffer.allocate(buffer.readableBytes());

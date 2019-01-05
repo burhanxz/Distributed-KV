@@ -2,6 +2,8 @@ package lsm.base;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import io.netty.buffer.ByteBuf;
+
 public class FileMetaData {
     /**
      * .sst文件编号
@@ -34,6 +36,11 @@ public class FileMetaData {
 		this.fileSize = fileSize;
 		this.smallest = smallest;
 		this.largest = largest;
+	}
+	
+	public ByteBuf encode() {
+		// TODO
+		return null;
 	}
 
 	public long getNumber() {
