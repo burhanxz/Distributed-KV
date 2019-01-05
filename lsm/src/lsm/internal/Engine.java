@@ -260,7 +260,7 @@ public class Engine {
 				SeekingIterator<ByteBuf, ByteBuf> iter = sorter.poll();
 				// 取出迭代器当前位置数据，并移动到下一个位置
 				Entry<ByteBuf, ByteBuf> entry = iter.next();
-				InternalKey thisKey = new InternalKey(entry.getKey());
+				InternalKey thisKey = InternalKey.decode(entry.getKey());
 				// 如果数据重复，抛弃，否则加入到sstable中
 				if (lastKey != null && lastKey.getKey().equals(thisKey.getKey())) {
 					// 抛弃
@@ -427,9 +427,9 @@ public class Engine {
 		void addToSSTable(ByteBuf key, ByteBuf value) throws IOException {
 			// 更新最值
 			if(currentSmallest == null) {
-				currentSmallest = new InternalKey(key);
+				currentSmallest = InternalKey.decode(key);
 			}
-			currentLargest = new InternalKey(key);
+			currentLargest =InternalKey.decode(key);
 			// 插入数据到sstable
 			builder.add(key, value);
 		}

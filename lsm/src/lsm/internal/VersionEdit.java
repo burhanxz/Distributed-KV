@@ -72,7 +72,7 @@ public class VersionEdit{
 		// 序列化compact pointers
 		compactPointers.forEach((level, key) -> {
 			buff.writeInt(level);
-			buff.writeBytes(key.encode());
+			buff.writeBytes(key.encodeWithPrefix());
 		});
 		// 序列化delete files
 		deletedFiles.forEach((level, fileNumber) -> {
