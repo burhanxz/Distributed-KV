@@ -18,12 +18,14 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import com.google.common.base.Preconditions;
 
 import io.netty.buffer.ByteBuf;
 import lsm.MemTable;
 import lsm.SSTable;
 import lsm.SSTableBuilder;
 import lsm.SeekingIterator;
+import lsm.TableCache;
 import lsm.Version;
 import lsm.VersionSet;
 import lsm.base.Compaction;
@@ -44,6 +46,7 @@ public class EngineImpl {
 	 */
 	private final File databaseDir;
 	private final VersionSet versions;
+	private final TableCache tableCache;
 	/**
 	 * 指示是否关闭
 	 */
@@ -75,6 +78,7 @@ public class EngineImpl {
 		this.options = options;
 		this.databaseDir = databaseDir;
 		this.versions = null;
+		this.tableCache = null;
 		this.internalKeyComparator = null;
 		this.compactionExecutor = null;
 	}
@@ -225,7 +229,13 @@ public class EngineImpl {
 		// 将所有sstable的迭代器加入到优先队列中
 		levelInputs.forEach(fileMetaData -> {
 			// 根据file获取sstable
-			SSTable sstable = new SSTableImpl(databaseDir, fileMetaData);
+			SSTable sstable = null;
+			try {
+				sstable = tableCache.getTable(fileMetaData.getNumber());
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			Preconditions.checkNotNull(sstable);
 			// 获取sstable中的迭代器并放入优先队列
 			SeekingIterator<ByteBuf, ByteBuf> iter = sstable.iterator();
 			sorter.add(iter);
@@ -233,7 +243,13 @@ public class EngineImpl {
 		// 同上
 		levelUpInputs.forEach(fileMetaData -> {
 			// 根据file获取sstable
-			SSTable sstable = new SSTableImpl(databaseDir, fileMetaData);
+			SSTable sstable = null;
+			try {
+				sstable = tableCache.getTable(fileMetaData.getNumber());
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			Preconditions.checkNotNull(sstable);
 			// 获取sstable中的迭代器并放入优先队列
 			SeekingIterator<ByteBuf, ByteBuf> iter = sstable.iterator();
 			sorter.add(iter);
