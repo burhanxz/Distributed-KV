@@ -1,5 +1,6 @@
 package lsm.internal;
 
+import java.io.File;
 import java.io.IOException;
 
 import io.netty.buffer.ByteBuf;
@@ -13,8 +14,14 @@ public class SSTableImpl implements SSTable{
 	 */
 	private final long fileNumber;
 	
-	public SSTableImpl(FileMetaData fileMetaData) {
+	public SSTableImpl(File databaseDir, FileMetaData fileMetaData) {
+		//TODO
 		this.fileNumber = fileMetaData.getNumber();
+	}
+	
+	public SSTableImpl(File databaseDir, Long fileNumber) {
+		//TODO
+		this.fileNumber = fileNumber;
 	}
 		
 	@Override

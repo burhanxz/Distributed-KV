@@ -1,5 +1,9 @@
 package lsm.base;
 
-public class LookupResult {
+import io.netty.buffer.ByteBuf;
 
+public class LookupResult {
+	public LookupResult(LookupKey key, ByteBuf value, InternalKey.InternalKeyType type) {
+		//TODO
+	}
 }

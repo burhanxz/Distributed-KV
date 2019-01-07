@@ -17,8 +17,9 @@ public interface Level{
 	 * 在当前level的所有文件里查找key
 	 * @param key 查找的key
 	 * @return 查找结果
+	 * @throws Exception 
 	 */
-	public LookupResult get(LookupKey key);
+	public LookupResult get(LookupKey key) throws Exception;
 	/**
 	 * 获取本层所有的文件
 	 * @return

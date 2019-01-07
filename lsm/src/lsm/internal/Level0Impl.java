@@ -21,7 +21,7 @@ public class Level0Impl extends AbstractLevel{
 		});
 	}
 	@Override
-	public LookupResult get(LookupKey key) {
+	public LookupResult get(LookupKey key) throws Exception {
 		// 获取第一个大小范围包含key的文件
 		long fileNumber = 0;
 		long fileSize = 0;

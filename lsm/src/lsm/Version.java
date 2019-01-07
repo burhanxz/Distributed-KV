@@ -14,8 +14,9 @@ public interface Version {
 	 * 核心方法，获取key对应的value
 	 * @param key 查找的key
 	 * @return 查到的value
+	 * @throws Exception 
 	 */
-	public LookupResult get(LookupKey key);
+	public LookupResult get(LookupKey key) throws Exception;
 	/**
 	 * 增加一次引用计数
 	 */

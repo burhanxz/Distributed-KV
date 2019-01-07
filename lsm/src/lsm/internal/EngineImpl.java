@@ -225,7 +225,7 @@ public class EngineImpl {
 		// 将所有sstable的迭代器加入到优先队列中
 		levelInputs.forEach(fileMetaData -> {
 			// 根据file获取sstable
-			SSTable sstable = new SSTableImpl(fileMetaData);
+			SSTable sstable = new SSTableImpl(databaseDir, fileMetaData);
 			// 获取sstable中的迭代器并放入优先队列
 			SeekingIterator<ByteBuf, ByteBuf> iter = sstable.iterator();
 			sorter.add(iter);
@@ -233,7 +233,7 @@ public class EngineImpl {
 		// 同上
 		levelUpInputs.forEach(fileMetaData -> {
 			// 根据file获取sstable
-			SSTable sstable = new SSTableImpl(fileMetaData);
+			SSTable sstable = new SSTableImpl(databaseDir, fileMetaData);
 			// 获取sstable中的迭代器并放入优先队列
 			SeekingIterator<ByteBuf, ByteBuf> iter = sstable.iterator();
 			sorter.add(iter);

@@ -33,7 +33,7 @@ public class VersionImpl implements Version{
 		this.levels = null;
 	}
 	@Override
-	public LookupResult get(LookupKey key) {
+	public LookupResult get(LookupKey key) throws Exception {
 		// 增加引用计数
 		retain();
 		// 先查找level0
