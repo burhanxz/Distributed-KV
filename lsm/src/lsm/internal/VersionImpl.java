@@ -9,6 +9,8 @@ import lsm.Level;
 import lsm.Version;
 import lsm.VersionSet;
 import lsm.base.FileMetaData;
+import lsm.base.LookupKey;
+import lsm.base.LookupResult;
 
 public class VersionImpl implements Version{
 	private final AtomicInteger retained = new AtomicInteger(1);
@@ -22,11 +24,8 @@ public class VersionImpl implements Version{
 	private int compactionLevel;
 	// 当score>=1时，也需要进行合并
 	private double compactionScore;
-	@Override
-	public int pickLevelForMemTableOutput(ByteBuf smallest, ByteBuf largest) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
+	
+	
 	@Override
 	public double getCompactionScore() {
 		// TODO Auto-generated method stub
@@ -56,6 +55,11 @@ public class VersionImpl implements Version{
 	public void release() {
 		// TODO Auto-generated method stub
 		
+	}
+	@Override
+	public LookupResult get(LookupKey key) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 	
 

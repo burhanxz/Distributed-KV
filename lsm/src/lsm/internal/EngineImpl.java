@@ -33,7 +33,7 @@ import lsm.base.InternalKey;
 import lsm.base.Options;
 import lsm.base.SeekingIteratorComparator;
 
-public class Engine {
+public class EngineImpl {
 	/**
 	 * 引擎基本配置
 	 */
@@ -70,7 +70,7 @@ public class Engine {
 	 * 一些待处理的无用文件，可能需要删除
 	 */
 	private final List<Long> pendingFileNumbers = new ArrayList<>();
-	public Engine(Options options, File databaseDir) {
+	public EngineImpl(Options options, File databaseDir) {
 		// TODO
 		this.options = options;
 		this.databaseDir = databaseDir;
@@ -158,15 +158,15 @@ public class Engine {
 			// 将memTable中的数据持久化到sstable
 			FileMetaData fileMetaData = memToSSTable(immutableMemTable);
 			// 更新version及versionEdit信息
-			// 0层
-			int level = 0;
 			if (fileMetaData != null && fileMetaData.getFileSize() > 0) {
 				// 获取最值
-				ByteBuf minUserKey = fileMetaData.getSmallest().getKey();
-				ByteBuf maxUserKey = fileMetaData.getLargest().getKey();
-				if (version != null) {
-					level = version.pickLevelForMemTableOutput(minUserKey, maxUserKey);
-				}
+//				ByteBuf minUserKey = fileMetaData.getSmallest().getKey();
+//				ByteBuf maxUserKey = fileMetaData.getLargest().getKey();
+				// immutable memtable序列化文件直接放入0层
+				int level = 0;
+//				if (version != null) {
+//					level = version.pickLevelForMemTableOutput(minUserKey, maxUserKey);
+//				}
 				// 增加文件信息
 				edit.addFile(level, fileMetaData);
 			}
