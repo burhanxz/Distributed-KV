@@ -25,11 +25,8 @@ public interface SeekingIterator<K,V> extends Iterator<Entry<K,V>>{
 	public void seek(K key);
 	
 	/**
-	 * 寻找第一个位置的数据
-	 * @return 第一个位置的数据
+	 * 指针移动到第一个位置
+	 * @return 
 	 */
-	public Entry<K,V> seekToFirst();
-
-	@Override
-	public void remove();
+	public void seekToFirst();
 }
