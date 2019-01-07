@@ -13,54 +13,68 @@ import lsm.base.LookupKey;
 import lsm.base.LookupResult;
 
 public class VersionImpl implements Version{
-	private final AtomicInteger retained = new AtomicInteger(1);
-//	private final VersionSet versionSet;
-//	private final Level0 level0;
-//	private final List<Level> levels;
-
-	// move these mutable fields somewhere else
+	/**
+	 * 引用计数，当前version被引用的次数
+	 */
+	private final AtomicInteger ref = new AtomicInteger(0);
+	private final VersionSet versionSet;
+	private final Level level0;
+	private final List<Level> levels;
 
 	// 需要进行合并的level
 	private int compactionLevel;
 	// 当score>=1时，也需要进行合并
 	private double compactionScore;
 	
-	
-	@Override
-	public double getCompactionScore() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-	@Override
-	public void setCompactionScore(double score) {
-		// TODO Auto-generated method stub
-		
-	}
-	@Override
-	public int getCompactionLevel() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-	@Override
-	public void setCompactionLevel(int level) {
-		// TODO Auto-generated method stub
-		
-	}
-	@Override
-	public void retain() {
-		// TODO Auto-generated method stub
-		
-	}
-	@Override
-	public void release() {
-		// TODO Auto-generated method stub
-		
+	public VersionImpl(VersionSet versionSet) {
+		this.versionSet = versionSet;
+		//TODO
+		this.level0 = null;
+		this.levels = null;
 	}
 	@Override
 	public LookupResult get(LookupKey key) {
-		// TODO Auto-generated method stub
+		// 先查找level0
+		LookupResult result = level0.get(key);
+		// 如果没有，再查找所有level
+		if(result != null) {
+			return result;
+		}
+		else {
+			for(Level level : levels) {
+				result = level.get(key);
+				if(result != null) {
+					return result;
+				}
+			}
+		}
 		return null;
 	}
+	@Override
+	public void retain() {
+		ref.incrementAndGet();
+	}
+	@Override
+	public void release() {
+		ref.decrementAndGet();
+	}
+	@Override
+	public double getCompactionScore() {
+		return compactionScore;
+	}
+	@Override
+	public void setCompactionScore(double score) {
+		this.compactionScore = score;
+	}
+	@Override
+	public int getCompactionLevel() {
+		return compactionLevel;
+	}
+	@Override
+	public void setCompactionLevel(int level) {
+		this.compactionLevel = level;
+	}
+
 	
 
 }
