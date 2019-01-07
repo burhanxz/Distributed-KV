@@ -34,20 +34,28 @@ public class VersionImpl implements Version{
 	}
 	@Override
 	public LookupResult get(LookupKey key) {
+		// 增加引用计数
+		retain();
 		// 先查找level0
 		LookupResult result = level0.get(key);
 		// 如果没有，再查找所有level
 		if(result != null) {
+			// 减少引用计数
+			release();
 			return result;
 		}
 		else {
 			for(Level level : levels) {
 				result = level.get(key);
 				if(result != null) {
+					// 减少引用计数
+					release();
 					return result;
 				}
 			}
 		}
+		// 减少引用计数
+		release();
 		return null;
 	}
 	@Override
