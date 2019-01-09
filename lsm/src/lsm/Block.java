@@ -4,20 +4,6 @@ import io.netty.buffer.ByteBuf;
 
 public interface Block extends SeekingIterable<ByteBuf, ByteBuf> {
 	/**
-	 * block中的record的数目*
-	 * 
-	 * @return record的数目
-	 */
-	public int size();
-
-	/**
-	 * block在table中的偏移
-	 * 
-	 * @return 偏移量
-	 */
-	public long getOffset();
-
-	/**
 	 * block有效数据大小（除block trailer）
 	 * 
 	 * @return
