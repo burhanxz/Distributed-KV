@@ -60,6 +60,10 @@ public class SSTableImpl implements SSTable{
 	
 	@Override
 	public Block openBlock(int blockOffset, int blockSize) throws IOException {
+		Preconditions.checkState(isClosed);
+		Preconditions.checkArgument(blockOffset >= 0);
+		Preconditions.checkArgument(blockSize > 0);
+		
 		ByteBuf blockBuffer = PooledByteBufAllocator.DEFAULT.buffer(blockSize);
 		ByteBufUtils.read(channel.position(blockOffset), blockBuffer);
 		Block block = new BlockImpl(blockBuffer);

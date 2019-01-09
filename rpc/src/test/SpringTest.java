@@ -3,8 +3,8 @@ package test;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
-import provide.ComputeService;
-import spring.SpringConfig;
+import rpc.provide.ComputeService;
+import rpc.spring.SpringConfig;
 
 /**
  * @author bird

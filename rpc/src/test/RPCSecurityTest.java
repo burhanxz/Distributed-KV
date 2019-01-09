@@ -5,8 +5,8 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.concurrent.CountDownLatch;
 
-import lock.RPCSecurity;
-import redis.RedisPoolUtil;
+import rpc.lock.RPCSecurity;
+import rpc.redis.RedisPoolUtil;
 
 public class RPCSecurityTest {
 

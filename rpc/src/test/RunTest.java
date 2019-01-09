@@ -6,11 +6,11 @@ import java.util.Scanner;
 
 import org.junit.Test;
 
-import facet.Log;
-import provide.ComputeService;
-import provide.NameService;
-import registry.Registry;
-import registry.RegistryFactory;
+import rpc.facet.Log;
+import rpc.provide.ComputeService;
+import rpc.provide.NameService;
+import rpc.registry.Registry;
+import rpc.registry.RegistryFactory;
 
 public class RunTest {
 

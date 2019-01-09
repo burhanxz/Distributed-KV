@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 
+import com.google.common.base.Preconditions;
+
 import io.netty.buffer.ByteBuf;
 import lsm.Block;
 import lsm.SeekingIterator;
@@ -15,6 +17,8 @@ public class BlockImpl implements Block{
 	private int restarts;
 	
 	public BlockImpl(ByteBuf block) {
+		// 至少有一个重启点数目信息
+		Preconditions.checkArgument(block.readableBytes() > Integer.BYTES);
 		this.block = block.slice();
 		// 获取数据尾端4B作为重启点数目
 		restarts = block.slice(block.writerIndex() - Integer.BYTES, Integer.BYTES).readInt();
