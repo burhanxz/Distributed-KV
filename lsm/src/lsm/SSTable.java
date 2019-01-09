@@ -1,6 +1,7 @@
 package lsm;
 
 import java.io.Closeable;
+import java.io.IOException;
 
 import io.netty.buffer.ByteBuf;
 
@@ -10,5 +11,5 @@ import io.netty.buffer.ByteBuf;
  *
  */
 public interface SSTable extends SeekingIterable<ByteBuf, ByteBuf>, Closeable{
-	public Block openBlock(int blockOffset, int blockSize);
+	public Block openBlock(int blockOffset, int blockSize) throws IOException;
 }

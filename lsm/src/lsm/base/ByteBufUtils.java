@@ -13,10 +13,19 @@ public class ByteBufUtils {
 		// 建立bytebuffer以便写入文件
 		ByteBuffer tmpBuffer = ByteBuffer.allocate(buffer.readableBytes());
 		// 将bytebuf中的数据导入bytebuffer中
-		buffer.readBytes(tmpBuffer);
+		buffer.slice().readBytes(tmpBuffer);
 		// bytebuffer数据写入fileChannel
 		tmpBuffer.flip();
 		channel.write(tmpBuffer);
+	}
+	public static void read(FileChannel channel, ByteBuf buffer) throws IOException {
+		// 建立bytebuffer以便写入文件
+		ByteBuffer tmpBuffer = ByteBuffer.allocate(buffer.readableBytes());
+		// 文件数据写入buffer
+		channel.read(tmpBuffer);
+		tmpBuffer.flip();
+		// bytebuffer写入byteBuf
+		buffer.writeBytes(tmpBuffer);
 	}
 	public static void markIndex(ByteBuf... buffers) {
 		for(ByteBuf buffer : buffers) {

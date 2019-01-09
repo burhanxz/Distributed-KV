@@ -41,13 +41,29 @@ public class SSTableImpl implements SSTable{
 		// 将文件尾部48B数据读取到内存作为Footer数据
 		ByteBuf footer = PooledByteBufAllocator.DEFAULT.buffer(FOOTER_SIZE);
 		ByteBufUtils.write(channel.position(channel.size() - FOOTER_SIZE), footer);
-		// 根据Footer获取indexBlock和metaIndexBlock
-		
+		// 根据Footer获取indexBlock handle和metaIndexBlock handle
+		ByteBuf indexBlockHandle = footer.slice(footer.readerIndex(), Integer.BYTES * 2);
+		ByteBuf metaIndexBlockHandle = footer.slice(footer.readerIndex() + Integer.BYTES * 2, Integer.BYTES * 2);
+		// 读取index block和meta index block字节
+		int indexBlockOffset = indexBlockHandle.readInt();
+		int indexBlockSize = indexBlockHandle.readInt();
+		int metaIndexBlockOffset = metaIndexBlockHandle.readInt();
+		int metaIndexBlockSize = metaIndexBlockHandle.readInt();
+		ByteBuf indexBlockBuffer = PooledByteBufAllocator.DEFAULT.buffer(indexBlockSize);
+		ByteBuf metaIndexBlockBuffer = PooledByteBufAllocator.DEFAULT.buffer(metaIndexBlockSize);
+		ByteBufUtils.read(channel.position(indexBlockOffset), indexBlockBuffer);
+		ByteBufUtils.read(channel.position(metaIndexBlockOffset), metaIndexBlockBuffer);
+		// 获取Block对象
+		indexBlock = new BlockImpl(indexBlockBuffer);
+		metaIndexBlock = new BlockImpl(metaIndexBlockBuffer);
 	}
 	
 	@Override
-	public Block openBlock(int blockOffset, int blockSize) {
-		return null;
+	public Block openBlock(int blockOffset, int blockSize) throws IOException {
+		ByteBuf blockBuffer = PooledByteBufAllocator.DEFAULT.buffer(blockSize);
+		ByteBufUtils.read(channel.position(blockOffset), blockBuffer);
+		Block block = new BlockImpl(blockBuffer);
+		return block;
 	}
 	
 	@Override
@@ -155,7 +171,12 @@ public class SSTableImpl implements SSTable{
 	        int blockOffset = handle.getInt(handle.readerIndex());
 	        int blockSize = handle.getInt(handle.readerIndex() + Integer.BYTES);
 	        // 根据offset和size获取block
-	        Block dataBlock = openBlock(blockSize, blockOffset);
+	        Block dataBlock = null;
+			try {
+				dataBlock = openBlock(blockSize, blockOffset);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 	        // 根据block获取迭代器
 	        return dataBlock.iterator();
 		}
