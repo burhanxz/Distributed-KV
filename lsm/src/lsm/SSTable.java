@@ -10,5 +10,5 @@ import io.netty.buffer.ByteBuf;
  *
  */
 public interface SSTable extends SeekingIterable<ByteBuf, ByteBuf>, Closeable{
-	
+	public Block openBlock(int blockOffset, int blockSize);
 }

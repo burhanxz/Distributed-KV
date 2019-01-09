@@ -22,7 +22,11 @@ import lsm.base.InternalKey;
  * |  index block  | 一个专门存放index的block，存放 (分界k, 索引块编码)
  * |metaIndex block| 一个专门存放bloom filter index的block，只有一条记录,存放 (filter名， filter位置)
  * |     Footer    | 指向各个分区的位置和大小
- * 
+ * Footer的典型格式(48B)
+ * |   index block handle   | 存放index block的handle信息
+ * | meta index block handle| 存放meta index block的handle信息
+ * |         padding        | 填充，使得其上两个区域大小达到40B
+ * |          magic         | 魔数，8B
  * @author bird
  *
  */
@@ -150,7 +154,9 @@ public class SSTableBuilderImpl implements SSTableBuilder {
 		ByteBuf metaIndexBlockHandle = getHandle((int) fileChannel.position(), metaIndexBlockBytes.readableBytes());
 		// 将meta index block序列化到文件
 		ByteBufUtils.write(fileChannel, metaIndexBlockBytes);
-
+		
+		// 此处实际上就是footer的序列化过程，其中padding, index block handle和meta index block handle共占40B
+		// footer中magic占8B，footer总大小48B
 		// 获取填充数据
 		ByteBuf padding = PooledByteBufAllocator.DEFAULT.buffer(PADDING_CONSTANTS - indexBlockHandle.readableBytes() - metaIndexBlockHandle.readableBytes());
 		// 获取魔数

@@ -3,6 +3,7 @@ package lsm.internal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.zip.CRC32;
 
 import org.jboss.netty.util.internal.ByteBufferUtil;
@@ -152,7 +153,5 @@ public class BlockBuilderImpl implements BlockBuilder{
 	@Override
 	public int size() {
 		return block.readableBytes();
-	}
-
-
+	}	
 }
