@@ -1,6 +1,8 @@
 package lsm;
 
-import io.netty.buffer.ByteBuf;
+import java.util.List;
+
+import lsm.base.FileMetaData;
 import lsm.base.LookupKey;
 import lsm.base.LookupResult;
 
@@ -25,7 +27,12 @@ public interface Version {
 	 * 减少一次引用计数
 	 */
 	public void release();
-
+	/**
+	 * 获取某层所有file信息
+	 * @param level 层数
+	 * @return 所有文件信息
+	 */
+	public List<FileMetaData> getFiles(int level);
 	/**
 	 * 获取compaction score，是判断是否需要compaction的关键指标
 	 * @return

@@ -136,5 +136,8 @@ public class VersionEdit{
 	public Long getLastSequenceNumber() {
 		return lastSequenceNumber;
 	}
+	public void setCompactPointer(int level, InternalKey levelLargest) {
+		// TODO Auto-generated method stub
+	}
 
 }

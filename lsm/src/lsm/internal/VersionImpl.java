@@ -82,6 +82,15 @@ public class VersionImpl implements Version{
 	public void setCompactionLevel(int level) {
 		this.compactionLevel = level;
 	}
+	@Override
+	public List<FileMetaData> getFiles(int level) {
+		if(level == 0) {
+			return level0.getFiles();
+		}
+		else {
+			return levels.get(level).getFiles();
+		}
+	}
 
 	
 

@@ -16,13 +16,14 @@ public class Compaction {
 	private final long maxOutputFileSize;
 
 	public Compaction(Version inputVersion, int level, List<FileMetaData> levelInputs,
-			List<FileMetaData> levelUpInputs, long maxOutputFileSize) {
+			List<FileMetaData> levelUpInputs) {
 		this.inputVersion = inputVersion;
 		this.level = level;
 		this.levelInputs = levelInputs;
 		this.levelUpInputs = levelUpInputs;
-		this.maxOutputFileSize = maxOutputFileSize;
+		
 		// TODO
+		this.maxOutputFileSize = 0;
 		this.edit = null;
 	}
 	
