@@ -73,7 +73,7 @@ public class SSTableImpl implements SSTable{
 	@Override
 	public SeekingIterator<ByteBuf, ByteBuf> iterator() {
 		Preconditions.checkState(isClosed);
-		return null;
+		return new TwoLevelIterator(indexBlock.iterator());
 	}
 
 	@Override
@@ -104,6 +104,10 @@ public class SSTableImpl implements SSTable{
 		 * level2迭代器，指向所有data block中的数据，包含真实数据
 		 */
 		private SeekingIterator<ByteBuf, ByteBuf> dataBlockIterator;
+		
+		TwoLevelIterator(SeekingIterator<ByteBuf, ByteBuf> indexBlockIterator){
+			this.indexBlockIterator = indexBlockIterator;
+		}
 		@Override
 		public boolean hasNext() {
 			// 如果next为空，尝试获取下一个元素
@@ -147,6 +151,7 @@ public class SSTableImpl implements SSTable{
 	        next = null;
 			// 先利用level1容器迭代器寻找位置
 			indexBlockIterator.seek(key);
+			// TODO bloom过滤器判断key是否真正存在
 			if(indexBlockIterator.hasNext()) {
 				// 取出data block及其迭代器
 				dataBlockIterator = getCurrentDataBlockIterator();
