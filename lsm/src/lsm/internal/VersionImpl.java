@@ -3,6 +3,8 @@ package lsm.internal;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.base.Preconditions;
+
 import io.netty.buffer.ByteBuf;
 import lsm.Level;
 
@@ -35,7 +37,7 @@ public class VersionImpl implements Version{
 	@Override
 	public LookupResult get(LookupKey key) throws Exception {
 		// 增加引用计数
-		retain();
+//		retain();
 		// 先查找level0
 		LookupResult result = level0.get(key);
 		// 如果没有，再查找所有level
@@ -55,8 +57,12 @@ public class VersionImpl implements Version{
 			}
 		}
 		// 减少引用计数
-		release();
+//		release();
 		return null;
+	}
+	@Override
+	public int refs() {
+		return ref.get();
 	}
 	@Override
 	public void retain() {
@@ -65,6 +71,15 @@ public class VersionImpl implements Version{
 	@Override
 	public void release() {
 		ref.decrementAndGet();
+	}
+	@Override
+	public int maxLevel() {
+		return levels.size();
+	}
+	@Override
+	public int files(int level) {
+		Preconditions.checkArgument(level - 1 < levels.size());
+		return level == 0 ? level0.getFiles().size() : levels.get(level - 1).getFiles().size();
 	}
 	@Override
 	public double getCompactionScore() {
@@ -84,14 +99,12 @@ public class VersionImpl implements Version{
 	}
 	@Override
 	public List<FileMetaData> getFiles(int level) {
+		Preconditions.checkArgument(level - 1 < levels.size());
 		if(level == 0) {
 			return level0.getFiles();
 		}
 		else {
-			return levels.get(level).getFiles();
+			return levels.get(level - 1).getFiles();
 		}
 	}
-
-	
-
 }

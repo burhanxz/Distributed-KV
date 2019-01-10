@@ -1,7 +1,5 @@
 package lsm.internal;
 
-import static com.google.common.base.Preconditions.checkState;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -18,6 +16,7 @@ import com.google.common.collect.Maps;
 
 import lsm.TableCache;
 import lsm.Version;
+import lsm.VersionBuilder;
 import lsm.VersionSet;
 import lsm.base.Compaction;
 import lsm.base.FileMetaData;
@@ -29,6 +28,7 @@ public class VersionSetImpl implements VersionSet{
 	 * 最大层数
 	 */
 	private static final int LEVELS = 7;
+	private static final int LEVEL0_FILES_LIMIT = 4;
 	/**
 	 * manifest 文件编号为1
 	 */
@@ -36,7 +36,7 @@ public class VersionSetImpl implements VersionSet{
 	/**
 	 * 除manifest以外的文件，编号从2开始
 	 */
-	private final AtomicLong nextFileNumber = new AtomicLong(2);
+	private final AtomicLong nextFileNumber = new AtomicLong(MANIFEST_FILENUM + 1);
 	/**
 	 * 数据库工作目录
 	 */
@@ -136,7 +136,7 @@ public class VersionSetImpl implements VersionSet{
 		range = getRange(levelInputs);
 		InternalKey levelLargest = range.getValue();
 		compactPointers.put(level, levelLargest);
-		// 更新edit中的compact pointer
+		// 更新edit中的compact nullpointer
 		compaction.getEdit().setCompactPointer(level, levelLargest);
 		return compaction;
 	}
@@ -145,32 +145,87 @@ public class VersionSetImpl implements VersionSet{
 	public void logAndApply(VersionEdit edit) {
 		// TODO Auto-generated method stub
 		// edit信息设置到versionSet字段中
+		// 如果edit中已经包含一些信息,检查这些信息
+		if (edit.getLogNumber() != null) {
+			Preconditions.checkArgument(edit.getLogNumber() >= logNumber);
+			Preconditions.checkArgument(edit.getLogNumber() < nextFileNumber.get());
+		} else {
+			edit.setLogNumber(logNumber);
+		}
+		if(edit.getNextFileNumber() > 0) {
+			Preconditions.checkArgument(edit.getNextFileNumber() <= nextFileNumber.get());
+		} else {
+			edit.setNextFileNumber(nextFileNumber.get());
+		}
+		if(edit.getLastSequenceNumber() > 0) {
+			Preconditions.checkArgument(edit.getLastSequenceNumber() <= lastSequence);
+		} else {
+			edit.setLastSequenceNumber(lastSequence);
+		}
 		// 利用versionBuilder和edit，经过多次中间形态,形成最终的version
+		// TODO
+		VersionBuilder builder = null;
+		builder.apply(edit);
+		Version version = builder.build();
 		// 对version中的每一级sstable做一个评估，选择score最高的level作为需要compact的level（compaction_level_），评估是根据每个level上文件的大小（level 你，n>0）和数量(level 0)
-		// 将edit信息持久化到manifest
+		setLevelAndScore(version);
+		// TODO 将edit信息持久化到manifest
 		// 把得到的version最终放入versionSet中
+		appendVersion(version);
+		logNumber = edit.getLogNumber();
 	}
 
-	@Override
-	public long getLastSequence() {
-		return lastSequence;
+	/**
+	 * 将version放进version列表中
+	 * @param version
+	 */
+	private void appendVersion(Version version) {
+		Preconditions.checkNotNull(version);
+		Preconditions.checkArgument(version.refs() == 0);
+		Preconditions.checkArgument(version != current);
+		// 减少current引用计数，如果引用计数降为0则主动删除version
+		if(current != null) {
+			current.release();
+			if(current.refs() == 0) {
+				activeVersions.remove(current);
+			}
+		}
+		// 更新current并放入version列表
+		current = version;
+		current.retain();
+		activeVersions.put(current, new Object());
 	}
-
-	@Override
-	public long getNextFileNumber() {
-		return nextFileNumber.getAndIncrement();
-	}
-
-	@Override
-	public Version getCurrent() {
-		return current;
+	private void setLevelAndScore(Version version) {
+		// 最佳level和最佳score
+		int bestLevel = -1;
+		double bestScore = -1.0;
+		// 遍历所有层次，找出最大的score值并记录
+		for (int level = 0; level <= version.maxLevel(); level++) {
+			double score = 0;
+			if (level == 0) {
+				// level0 依据文件数目
+				score = 1.0 * version.files(level) / LEVEL0_FILES_LIMIT;
+			} else {
+				// level1以上的层次，依据文件大小
+				long levelBytes = version.levelBytes(level);
+				score = (double)levelBytes / maxBytesForLevel(level);
+			}
+			// 更新最佳score和level
+			if (score > bestScore) {
+				bestLevel = level;
+				bestScore = score;
+			}
+		}
+		// 将最佳level和score设置到version
+		version.setCompactionLevel(bestLevel);
+		version.setCompactionScore(bestScore);
 	}
 	/**
 	 * 获取所有文件的最终大小范围
 	 * @param inputLists
 	 * @return 最小值和最大值
 	 */
-	private Entry<InternalKey, InternalKey> getRange(@SuppressWarnings("unchecked") List<FileMetaData>... inputLists) {
+	private Entry<InternalKey, InternalKey> getRange(List<FileMetaData>... inputLists) {
 		InternalKey smallest = null;
 		InternalKey largest = null;
 		// 遍历所有文件列表中的所有文件
@@ -215,5 +270,34 @@ public class VersionSetImpl implements VersionSet{
 			}
 		}
 		return files.build();
+	}
+	/**
+	 * 计算每层最大数据量
+	 * @param level 层数
+	 * @return 最大数据量
+	 */
+	private double maxBytesForLevel(int level) {
+		// level0层文件大小为10MB
+		double base = 10.0 * (1 << 20);
+		while (level > 1) {
+			base *= 10;
+			level--;
+		}
+		return base;
+	}
+
+	@Override
+	public long getLastSequence() {
+		return lastSequence;
+	}
+
+	@Override
+	public long getNextFileNumber() {
+		return nextFileNumber.getAndIncrement();
+	}
+
+	@Override
+	public Version getCurrent() {
+		return current;
 	}
 }

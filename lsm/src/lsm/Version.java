@@ -20,6 +20,11 @@ public interface Version {
 	 */
 	public LookupResult get(LookupKey key) throws Exception;
 	/**
+	 * 获取引用计数
+	 * @return
+	 */
+	public int refs();
+	/**
 	 * 增加一次引用计数
 	 */
 	public void retain();
@@ -33,6 +38,29 @@ public interface Version {
 	 * @return 所有文件信息
 	 */
 	public List<FileMetaData> getFiles(int level);
+	/**
+	 * 计算某层的总数据量
+	 * @param level 层数
+	 * @return 总数据量
+	 */
+	public default long levelBytes(int level) {
+		long levelBytes = 0;
+		for (FileMetaData fileMetaData : getFiles(level)) {
+			levelBytes += fileMetaData.getFileSize();
+		}
+		return levelBytes;
+	}
+	/**
+	 * 最大level编号
+	 * @return
+	 */
+	public int maxLevel();
+	/**
+	 * 某层中的文件总数
+	 * @param level 层编号
+	 * @return 文件数目
+	 */
+	public int files(int level);
 	/**
 	 * 获取compaction score，是判断是否需要compaction的关键指标
 	 * @return

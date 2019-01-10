@@ -137,7 +137,7 @@ public class VersionEdit{
 		return lastSequenceNumber;
 	}
 	public void setCompactPointer(int level, InternalKey levelLargest) {
-		// TODO Auto-generated method stub
+		compactPointers.put(level, levelLargest);
 	}
 
 }
