@@ -1,4 +1,4 @@
-package test;
+package test.java;
 
 import java.net.InetSocketAddress;
 import java.util.Random;
