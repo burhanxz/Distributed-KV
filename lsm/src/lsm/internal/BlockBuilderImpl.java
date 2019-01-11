@@ -5,10 +5,14 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.zip.CRC32;
-
 import org.jboss.netty.util.internal.ByteBufferUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Preconditions;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import lsm.BlockBuilder;
 import lsm.base.ByteBufUtils;
 
@@ -24,6 +28,7 @@ import lsm.base.ByteBufUtils;
  *
  */
 public class BlockBuilderImpl implements BlockBuilder{
+	private static final Logger LOG = LoggerFactory.getLogger(BlockImpl.class);
 	/**
 	 * 用于生成校验和
 	 */
@@ -44,9 +49,10 @@ public class BlockBuilderImpl implements BlockBuilder{
     private ByteBuf block;
     
 	public BlockBuilderImpl(int interval) {
+		Preconditions.checkArgument(interval >= 0);
 		this.interval = interval;
-		// TODO
-		this.block = null;
+		this.block = PooledByteBufAllocator.DEFAULT.buffer();
+		this.count = 0;
 	}
     
 	@Override
@@ -56,25 +62,26 @@ public class BlockBuilderImpl implements BlockBuilder{
 			// 如果是重启点，记录重启点位置
 			restartPoints.add(block.writerIndex());
 			// 记录现场
-			ByteBufUtils.markIndex(key);
+//			ByteBufUtils.markIndex(key);
 			// 写record
-			writeRecord(key.readableBytes(), 0, value.readableBytes(), key, value);
+			writeRecord(0, key.readableBytes(), value.readableBytes(), key, value);
 			// 恢复
-			ByteBufUtils.resetIndex(key);
+//			ByteBufUtils.resetIndex(key);
 
 		}
 		else {
 			// 如果不是重启点，计算共享长度，非共享长度
+			LOG.debug("key size = " + key.readableBytes());
 			int sharedLen = sharedLen(lastKey, key);
 			int nonSharedLen = key.readableBytes() - sharedLen;
 			// 记录现场
-			ByteBufUtils.markIndex(key);
+//			ByteBufUtils.markIndex(key);
 			// key调整读指针
-			key.readerIndex(key.readerIndex() + sharedLen);
+//			key.readerIndex(key.readerIndex() + sharedLen);
 			// 写record
 			writeRecord(sharedLen, nonSharedLen, value.readableBytes(), key, value);
 			// 恢复
-			ByteBufUtils.resetIndex(key);
+//			ByteBufUtils.resetIndex(key);
 		}
 		// 更新lastkey
 		lastKey = key;
@@ -91,11 +98,14 @@ public class BlockBuilderImpl implements BlockBuilder{
 		// 写入重启点数目
 		block.writeInt(restartPoints.size());
 		// 写入block trailer信息,即crc32校验和
-		crc32.reset();
-		crc32.update(block.array(), block.readerIndex(), block.writerIndex());
-		long crc32Ret = crc32.getValue();
-		block.writeLong(crc32Ret);
-		return block;
+		//TODO
+//		byte[] bytes = new byte[block.readableBytes()];
+//		block.slice().readBytes(bytes);
+//		crc32.reset();
+//		crc32.update(bytes);
+//		long crc32Ret = crc32.getValue();
+//		block.writeLong(crc32Ret);
+		return block.slice();
 	}
 	
 	/**
@@ -107,14 +117,23 @@ public class BlockBuilderImpl implements BlockBuilder{
 	 * @param value
 	 */
 	private void writeRecord(int sharedLen, int nonSharedLen, int valueLen, ByteBuf key, ByteBuf value) {
+		Preconditions.checkArgument(sharedLen >= 0);
+		Preconditions.checkArgument(nonSharedLen >= 0);
+		Preconditions.checkArgument(valueLen >= 0);
+		Preconditions.checkNotNull(key);
+		Preconditions.checkNotNull(value);
+		LOG.debug("sharedLen = " + sharedLen);
+		LOG.debug("nonSharedLen = " + nonSharedLen);
+		LOG.debug("valueLen = " + valueLen);
 		// 写入共享长度，非共享长度，value长度
 		block.writeInt(sharedLen);
 		block.writeInt(nonSharedLen);
 		block.writeInt(valueLen);
 		// 写入key非共享内容
-		block.writeBytes(key);
+		ByteBuf slice = key.slice(key.readerIndex() + sharedLen, nonSharedLen);
+		block.writeBytes(slice);
 		// 写入value
-		block.writeBytes(value);
+		block.writeBytes(value.slice());
 	}
 	
 	/**
@@ -124,9 +143,7 @@ public class BlockBuilderImpl implements BlockBuilder{
 	 * @return
 	 */
 	private int sharedLen(ByteBuf lastKey, ByteBuf key) {
-		//TODO 待验证
-		ByteBufUtils.markIndex(key);
-		ByteBufUtils.markIndex(lastKey);
+		key = key.slice();
 		int minLen = Math.min(lastKey.readableBytes(), key.readableBytes());
 		int len = 0;
 		// TODO 检验
@@ -135,13 +152,9 @@ public class BlockBuilderImpl implements BlockBuilder{
 				len++;
 			}
 			else {
-				ByteBufUtils.resetIndex(key);
-				ByteBufUtils.resetIndex(lastKey);
 				return len;
 			}
 		}
-		ByteBufUtils.resetIndex(key);
-		ByteBufUtils.resetIndex(lastKey);
 		return len;
 	}
 

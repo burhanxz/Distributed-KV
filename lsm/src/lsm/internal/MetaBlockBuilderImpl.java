@@ -3,6 +3,8 @@ package lsm.internal;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import lsm.FilterPolicy;
@@ -10,7 +12,7 @@ import lsm.MetaBlockBuilder;
 
 public class MetaBlockBuilderImpl implements MetaBlockBuilder{
 	/**
-	 * 以此为幂，设置1 << kFilterBaseLg KB生成一个meta block
+	 * 以此为幂，设置1 << kFilterBaseLg B生成一个meta block
 	 */
 	private final int kFilterBaseLg;
 	/**
@@ -33,7 +35,7 @@ public class MetaBlockBuilderImpl implements MetaBlockBuilder{
 	public MetaBlockBuilderImpl(int kFilterBaseLg, FilterPolicy filterPolicy) {
 		this.filterPolicy = filterPolicy;
 		this.kFilterBaseLg = kFilterBaseLg;
-		result = PooledByteBufAllocator.DEFAULT.buffer();
+		result = PooledByteBufAllocator.DEFAULT.buffer(1 << 10, Integer.MAX_VALUE);
 		filterOffsets = new ArrayList<>();
 		keys = new ArrayList<>();
 	}
@@ -77,11 +79,17 @@ public class MetaBlockBuilderImpl implements MetaBlockBuilder{
 		}
 		else {
 			// 将keys提取出来，生成filter数据
-			ByteBuf filter = filterPolicy.createFilter((ByteBuf[])keys.toArray());
+			ByteBuf filter = filterPolicy.createFilter(keys);
+			System.out.println("filter = " + filter.readableBytes());
 			// 将filter加入到result中
 			result.writeBytes(filter);
 			// 将当前result大小加入到filter offsets中
 			filterOffsets.add(result.readableBytes());
+			System.out.print("[ ");
+			filterOffsets.forEach(i -> {
+				System.out.print(i + " ");
+			});
+			System.out.println(" ]");
 			// 清空keys
 			keys.clear();
 		}

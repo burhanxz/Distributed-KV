@@ -1,5 +1,7 @@
 package lsm;
 
+import java.util.List;
+
 import io.netty.buffer.ByteBuf;
 
 /**
@@ -15,10 +17,17 @@ public interface FilterPolicy {
 	 */
 	public ByteBuf createFilter(ByteBuf[] keys);
 	/**
+	 * 根据keys创建filter数据
+	 * @param keys
+	 * @return
+	 */
+	public ByteBuf createFilter(List<ByteBuf> keys);
+	/**
 	 * 根据key和过滤数据来判断key是否存在
 	 * @param key 键
 	 * @param filter 过滤数据
  	 * @return 是否存在
 	 */
 	public boolean keyMayMatch(ByteBuf key, ByteBuf filter);
+	
 }

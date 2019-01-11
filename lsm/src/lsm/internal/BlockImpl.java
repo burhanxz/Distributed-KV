@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map.Entry;
 import com.google.common.base.Preconditions;
@@ -14,6 +16,7 @@ import lsm.Block;
 import lsm.SeekingIterator;
 
 public class BlockImpl implements Block{
+	private static final Logger LOG = LoggerFactory.getLogger(BlockImpl.class);
 	private ByteBuf block;
 	private ByteBuf data;
 	private List<Integer> restartPointers;
@@ -25,6 +28,7 @@ public class BlockImpl implements Block{
 		this.block = block.slice();
 		// 获取数据尾端4B作为重启点数目
 		restarts = block.slice(block.writerIndex() - Integer.BYTES, Integer.BYTES).readInt();
+		System.out.println("restarts = " + restarts);
 		restartPointers = new ArrayList<>(restarts);
 		// 重启点占数据总大小
 		int restartPointerSize = restarts * 4;
@@ -32,7 +36,7 @@ public class BlockImpl implements Block{
 		ByteBuf restartBuffer = block.slice(block.writerIndex() - Integer.BYTES - restartPointerSize, restartPointerSize);
 		// 载入重启点信息
 		for(int i = 0; i < restarts; i++) {
-			restartPointers.set(i, restartBuffer.readInt());
+			restartPointers.add(restartBuffer.readInt());
 		}
 		// 实际有效k-v数据
 		this.data = block.slice(block.readerIndex(), block.readableBytes() - Integer.BYTES - restartPointerSize);
@@ -78,7 +82,7 @@ public class BlockImpl implements Block{
 	        // 返回当前next元素
 	        Entry<ByteBuf, ByteBuf> nextElement = next;
 
-	        if (!data.isReadable()) {
+	        if (!iteratorData.isReadable()) {
 	        	next = null;
 	        }
 	        // 更新next元素
@@ -86,7 +90,7 @@ public class BlockImpl implements Block{
 	        	next = readNext(next.getKey());
 	        }
 
-	        return next;
+	        return nextElement;
 		}
 
 		@Override
@@ -140,12 +144,16 @@ public class BlockImpl implements Block{
 			int sharedLen = iteratorData.readInt();
 			int nonSharedLen = iteratorData.readInt();
 			int valueLen = iteratorData.readInt();
+			LOG.debug("sharedLen = " + sharedLen);
+			LOG.debug("nonSharedLen = " + nonSharedLen);
+			LOG.debug("valueLen = " + valueLen);
 			ByteBuf keyBuffer = PooledByteBufAllocator.DEFAULT.buffer(sharedLen + nonSharedLen);
 			// 将data中的数据读入key
 			// TODO 待验证
 			if(sharedLen > 0) {
+				Preconditions.checkNotNull(prevKey);
 				// 如果有共享长度，则将上一个数据的key的共享部分读取
-				prevKey.readBytes(keyBuffer, sharedLen);
+				prevKey.slice().readBytes(keyBuffer, sharedLen);
 			}
 			// 读取key非共享部分
 			iteratorData.readBytes(keyBuffer, nonSharedLen);

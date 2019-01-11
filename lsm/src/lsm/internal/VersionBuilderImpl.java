@@ -96,7 +96,4 @@ public class VersionBuilderImpl implements VersionBuilder{
 		}
 		return version;
 	}
-
-
-	
 }

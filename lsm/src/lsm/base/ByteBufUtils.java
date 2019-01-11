@@ -42,4 +42,18 @@ public class ByteBufUtils {
 			buffer.resetWriterIndex();
 		}
 	}
+	public static String buf2Str(ByteBuf buf) {
+	    String str;
+	    // 处理堆缓冲区
+	    if(buf.hasArray()) {
+	        str = new String(buf.array(), buf.arrayOffset() + buf.readerIndex(), buf.readableBytes());
+	    } else { 
+	    	// 处理直接缓冲区以及复合缓冲区
+	        byte[] bytes = new byte[buf.readableBytes()];
+	        buf.getBytes(buf.readerIndex(), bytes);
+	        str = new String(bytes, 0, buf.readableBytes());
+	    }
+	    return str;
+	}
+
 }

@@ -1,10 +1,16 @@
 package lsm.internal;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Preconditions;
+
 import io.netty.buffer.ByteBuf;
 import lsm.FilterPolicy;
 import lsm.MetaBlock;
 
 public class MetaBlockImpl implements MetaBlock{
+	private static final Logger LOG = LoggerFactory.getLogger(MetaBlockImpl.class);
 	/**
 	 * 过滤器
 	 */
@@ -30,8 +36,10 @@ public class MetaBlockImpl implements MetaBlock{
 	 * 基数
 	 */
 	private int kFilterBaseLg;
-	
+
 	public MetaBlockImpl(FilterPolicy filterPolicy, ByteBuf result) {
+		Preconditions.checkNotNull(filterPolicy);
+		Preconditions.checkNotNull(result);
 		this.filterPolicy = filterPolicy;
 		this.result = result;
 		// 获取kFilterBase
@@ -52,6 +60,8 @@ public class MetaBlockImpl implements MetaBlock{
 	
 	@Override
 	public boolean keyMayMatch(int blockOffset, ByteBuf key) {
+		Preconditions.checkArgument(blockOffset >= 0);
+		Preconditions.checkNotNull(key);
 		// 获取有效filter位置
 		int n = blockOffset >> kFilterBaseLg;
 		// TODO 此处需要验证. 获取有效filter数据
@@ -59,14 +69,17 @@ public class MetaBlockImpl implements MetaBlock{
 		int filterEndOffset = filterOffsets[n];
 		// 寻找第一个不和终止位置相同的filter offset作为起始位置
 		int filterStartOffset = 0;
-		for(int i = n - 1; i > 0; i--) {
+		for(int i = n - 1; i >= 0; i--) {
 			if(filterOffsets[i] != filterOffsets[n - 1]) {
 				filterStartOffset = filterOffsets[i];
 				break;
 			}
 		}
+		LOG.debug("filterEndOffset = " + filterEndOffset);
+		LOG.debug("filterStartOffset = " + filterStartOffset);
 		// 切片，获取实际filter数据
-		ByteBuf filter = filters.slice(filters.readerIndex() + filterStartOffset, filters.readerIndex() + filterEndOffset);
+		ByteBuf filter = filters.slice(filters.readerIndex() + filterStartOffset, filterEndOffset - filterStartOffset);
+		LOG.debug("filter size = " + filter.readableBytes());
 		// 调用过滤器
 		boolean exists = filterPolicy.keyMayMatch(key, filter);
 		return exists;

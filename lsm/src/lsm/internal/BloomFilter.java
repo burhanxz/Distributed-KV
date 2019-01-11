@@ -3,6 +3,13 @@ package lsm.internal;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.BitSet;
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -12,12 +19,25 @@ import lsm.base.ByteBufUtils;
 /**
  * filter数据格式
  * | bitset字节 | bitset实际大小 |
+ * 
+ * m	bit数组的宽度（bit数）
+ * n	加入其中的key的数量
+ * k	使用的hash函数的个数
+ * f	False Positive的比率
  * @author bird
  *
  */
 public class BloomFilter implements FilterPolicy{
-	private final static int k = 7;
-	private final static double bitPerKey = 10;
+	private static final Logger LOG = LoggerFactory.getLogger(BloomFilter.class);
+	private static final double BLOOM_FILTER_CONSTANTS = 0.6185;
+	/**
+	 * bloom filter错误率
+	 */
+	private static final double FALSE_POSITIVE = 0.03;
+	/**
+	 * 使用的hash函数的个数,k = -ln(f) / ln(2) 
+	 */
+	private final static int k = 5;
 	/**
 	 *  在大多数情况下，MD5提供了较好的散列精确度。如有必要，可以换成 SHA1算法
 	 */
@@ -40,8 +60,19 @@ public class BloomFilter implements FilterPolicy{
 	
 	@Override
 	public ByteBuf createFilter(ByteBuf[] keys) {
-		// 确定bitset大小
-		int bitSetSize = (int) Math.ceil(bitPerKey * keys.length);
+		Preconditions.checkNotNull(keys);
+		Preconditions.checkArgument(keys.length > 0);
+		return createFilter(Lists.asList(keys[0], keys));
+	}
+	@Override
+	public ByteBuf createFilter(List<ByteBuf> keys) {
+		Preconditions.checkNotNull(keys);
+		Preconditions.checkArgument(keys.size() > 0);
+		// 依据公式：
+		// n = m ln(0.6185) / ln(f) 
+		// m = n * ln(f) / ln(0.6185)
+		// 确定比特数
+		int bitSetSize = (int) ((double)keys.size() * Math.log(FALSE_POSITIVE) / Math.log(BLOOM_FILTER_CONSTANTS));
 		// 新建bitSet
 		BitSet bitset = new BitSet(bitSetSize);
 		// 将所有key投影到到bitset中去
@@ -52,7 +83,6 @@ public class BloomFilter implements FilterPolicy{
 		ByteBuf ret = bitSetToResult(bitset, bitSetSize);
 		return ret;
 	}
-
 	@Override
 	public boolean keyMayMatch(ByteBuf key, ByteBuf filter) {
 		// filter信息的末尾是bitset大小信息
@@ -60,17 +90,17 @@ public class BloomFilter implements FilterPolicy{
 		int bitsetSize = filter.getInt(filter.readerIndex() + retSize);
 		// 实际有效filter信息
 		ByteBuf realFilter = filter.slice(filter.readerIndex(), retSize);
-		// 记录当前位置
-		int writerIndex = key.writerIndex();
 		// TODO 可优化. 建立byte数组，盛放key和附加k
 		byte[] data = new byte[key.readableBytes() + Integer.BYTES];
 		// 映射k次
 		for (int x = 0; x < k; x++) {
-			ByteBufUtils.markIndex(key);
-			// 将k组装到key的末尾
-			key.setInt(writerIndex, k);
 			// 将key中的字节读入数组
-			key.readBytes(data);
+			key.slice().readBytes(data, 0, key.readableBytes());
+			// 将k组装到key的末尾
+			data[key.readableBytes()] = ((k >> 24) & 0xff);
+			data[key.readableBytes() + 1] = ((k >> 16) & 0xff);
+			data[key.readableBytes() + 2] = ((k >> 8) & 0xff);
+			data[key.readableBytes() + 3] = (k & 0xff);
 			// 生成hash数据
 			long hash = createHash(data);
 			hash = hash % (long) bitsetSize;
@@ -81,8 +111,6 @@ public class BloomFilter implements FilterPolicy{
 			boolean ret = (realFilter.getByte(i) & (1 << j)) >> j == 1 ? true : false;
 			if (!ret)
 				return false;
-			// 恢复key
-			ByteBufUtils.resetIndex(key);
 		}
 		return true;
 	}
@@ -94,24 +122,22 @@ public class BloomFilter implements FilterPolicy{
 	 * @param bitsetSize bitset实际大小
 	 */
 	private void add(BitSet bitset, ByteBuf key, int bitsetSize) {
-		// 记录当前位置
-		int writerIndex = key.writerIndex();
 		// TODO 可优化
 		byte[] data = new byte[key.readableBytes() + Integer.BYTES];
 		// 映射k次
 		for (int x = 0; x < k; x++) {
-			ByteBufUtils.markIndex(key);
-			// 将k组装到key的末尾
-			key.setInt(writerIndex, k);
 			// 将key中的字节读入数组
-			key.readBytes(data);
+			key.slice().readBytes(data, 0, key.readableBytes());
+			// 将k组装到key的末尾
+			data[key.readableBytes()] = ((k >> 24) & 0xff);
+			data[key.readableBytes() + 1] = ((k >> 16) & 0xff);
+			data[key.readableBytes() + 2] = ((k >> 8) & 0xff);
+			data[key.readableBytes() + 3] = (k & 0xff);
 			// 生成hash数据
 			long hash = createHash(data);
 			hash = hash % (long) bitsetSize;
 			// 将hash数据加入到bitset中
 			bitset.set(Math.abs((int) hash), true);
-			// 恢复key
-			ByteBufUtils.resetIndex(key);
 		}
 		
 	}
@@ -124,14 +150,17 @@ public class BloomFilter implements FilterPolicy{
 	 */
 	private ByteBuf bitSetToResult(BitSet bitSet, int bitSetSize) {
 		// 测试
-		if (bitSet.size() != bitSetSize) {
-			System.out.println("bitSet.size() = " + bitSet.size());
-			System.out.println("bitSetSize = " + bitSetSize);
-		}
+//		if (bitSet.size() != bitSetSize) {
+//			LOG.debug("bitSet.size() = " + bitSet.size());
+//			LOG.debug("bitSetSize = " + bitSetSize);
+//		}
 		// 计算ret所需大小
 		int retSize = (bitSet.size() / 8) + Integer.BYTES;
+		LOG.debug("retSize = " + retSize);
 		// 分配bytebuf
 		ByteBuf ret = PooledByteBufAllocator.DEFAULT.buffer(retSize);
+		// 先将bytebuf填充满
+		ret.writerIndex(retSize);
 		// 将bitset中的数据映射到bytebuf中
 		for (int i = 0; i < bitSet.size(); i++) {
 			int index = i / 8;
@@ -162,5 +191,7 @@ public class BloomFilter implements FilterPolicy{
 		}
 		return h;
 	}
+
+
 
 }
