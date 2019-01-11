@@ -1,5 +1,7 @@
 package lsm;
 
+import java.io.IOException;
+
 import lsm.base.Compaction;
 import lsm.internal.VersionEdit;
 
@@ -19,8 +21,9 @@ public interface VersionSet {
 	/**
 	 * 记录和应用一个edit，来产生一个新的version
 	 * @param edit 
+	 * @throws IOException 
 	 */
-	public void logAndApply(VersionEdit edit);
+	public void logAndApply(VersionEdit edit) throws IOException;
 	
 	/**
 	 * 获取最新序列号

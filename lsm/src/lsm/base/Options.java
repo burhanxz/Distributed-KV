@@ -6,4 +6,5 @@ import java.util.Comparator;
 public class Options {
 	// TODO
 	public static final Comparator<InternalKey> INTERNAL_KEY_COMPARATOR = null;
+	public static final String INTERNAL_KEY_COMPARATOR_NAME = "default_comparator";
 }

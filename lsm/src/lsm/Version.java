@@ -1,6 +1,9 @@
 package lsm;
 
 import java.util.List;
+import java.util.Map;
+
+import com.google.common.collect.ImmutableMap;
 
 import lsm.base.FileMetaData;
 import lsm.base.LookupKey;
@@ -39,6 +42,18 @@ public interface Version {
 	 */
 	public List<FileMetaData> getFiles(int level);
 	/**
+	 * 获取所有层的所有文件信息
+	 * @return
+	 */
+	public default Map<Integer, List<FileMetaData>> getFiles(){
+		ImmutableMap.Builder<Integer, List<FileMetaData>> mapBuilder = ImmutableMap.builder();
+		// 遍历所有层次
+		for(int i = 0; i <= maxLevel(); i++) {
+			mapBuilder.put(i, getFiles(i));
+		}
+		return mapBuilder.build();
+	}
+	/**
 	 * 计算某层的总数据量
 	 * @param level 层数
 	 * @return 总数据量
@@ -76,5 +91,6 @@ public interface Version {
 	 * @return 满足条件的最高层级
 	 */
 //	public int pickLevelForMemTableOutput(ByteBuf smallest, ByteBuf largest);
+	
 	
 }

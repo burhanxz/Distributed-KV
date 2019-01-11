@@ -20,6 +20,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import com.google.common.base.Preconditions;
 
 import io.netty.buffer.ByteBuf;
+import lsm.LogWriter;
 import lsm.MemTable;
 import lsm.SSTable;
 import lsm.SSTableBuilder;
@@ -197,8 +198,9 @@ public class EngineImpl {
 	 * 将文件移动到上面一层即可
 	 * @param compaction
 	 *            compact信息
+	 * @throws IOException 
 	 */
-	private void minorCompact(Compaction compaction) {
+	private void minorCompact(Compaction compaction) throws IOException {
 		Objects.requireNonNull(compaction);
 		FileMetaData fileMetaData = compaction.getLevelInputs().get(0);
 		compaction.getEdit().deleteFile(compaction.getLevel(), fileMetaData.getNumber());
@@ -472,8 +474,9 @@ public class EngineImpl {
 		}
 		/**
 		 * sstable信息记录到version中
+		 * @throws IOException 
 		 */
-		void installSSTable() {
+		void installSSTable() throws IOException {
 			VersionEdit edit = compaction.getEdit();
 			// 将刚刚参与归并的sstable文件作为待删除文件，加入到compaction中
 			compaction.addInputDeletions(compaction.getEdit());

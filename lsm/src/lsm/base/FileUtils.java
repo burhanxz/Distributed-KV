@@ -27,6 +27,18 @@ public class FileUtils {
 		return makeFileName(fileNumber, ".sst");
 	}
 	
+	public static String manifestFileName(long fileNumber) {
+		return makeFileName(fileNumber, ".manifest");
+	}
+
+	public static String tempFileName(long fileNumber) {
+		return makeFileName(fileNumber, ".tmp");
+	}
+
+	public static String currentFileName() {
+		return "CURRENT";
+	}
+	
     private static String makeFileName(long number, String suffix)
     {
         return String.format("%06d.%s", number, suffix);

@@ -2,7 +2,9 @@ package lsm.internal;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -17,12 +19,15 @@ import lsm.base.InternalKey;
 
 /**
  * versionEdit在manifest文件中的序列化结构:
- * | comparator name | log number(8B) | next file number(8B) | last seq(8B) | compact pointer | delete file(12B) | new file |
+ * | comparator name | log number(8B) | next file number(8B) | last seq(8B) |
+ * | compact pointer | delete file | new file |
  * 其中：
  * comparator name结构:
  * | name string length(4B) | name string |
  * compact pointer结构(多个):
  * | level(4B) | Internal key 长度 | InternalKey(见InternalKey序列化结构) |
+ * delete file结构：
+ * | level(4B) | long列表长度(4B) | long(8B)... |
  * new file结构(多个):
  * | level(4B) | fileMetaData 长度 | fileMetaData(见fileMetaData序列化结构) |
  * @author bird
@@ -47,8 +52,8 @@ public class VersionEdit{
 	private Long lastSequenceNumber;
 	
 	private final Map<Integer, InternalKey> compactPointers = new TreeMap<>();
-	private final Map<Integer, Long> deletedFiles = new HashMap<>();
-	private final Map<Integer, FileMetaData> newFiles = new HashMap<>();
+	private final Map<Integer, List<Long>> deletedFiles = new HashMap<>();
+	private final Map<Integer, List<FileMetaData>> newFiles = new HashMap<>();
 	/**
 	 * 将versionEdit编码为字节，方便序列化.序列化结构参考VersionEdit doc
 	 * @return 字节数据
@@ -77,16 +82,20 @@ public class VersionEdit{
 			buff.writeBytes(keyBuffer);
 		});
 		// 序列化delete files
-		deletedFiles.forEach((level, fileNumber) -> {
+		deletedFiles.forEach((level, fileNumbers) -> {
 			buff.writeInt(level);
-			buff.writeLong(fileNumber);
+			buff.writeInt(fileNumbers.size());
+			fileNumbers.forEach(fileNumber -> {
+				buff.writeLong(fileNumber);
+			});
 		});
 		// 序列化new files
 		newFiles.forEach((level, fileMetaData) -> {
 			buff.writeInt(level);
-			ByteBuf fileMetaDataBuffer = fileMetaData.encode();
-			buff.writeInt(fileMetaDataBuffer.readableBytes());
-			buff.writeBytes(fileMetaDataBuffer);
+			//TODO
+//			ByteBuf fileMetaDataBuffer = fileMetaData.encode();
+//			buff.writeInt(fileMetaDataBuffer.readableBytes());
+//			buff.writeBytes(fileMetaDataBuffer);
 		});
 		return buff;
 	}
@@ -98,7 +107,10 @@ public class VersionEdit{
 	public void deleteFile(int level, long fileNumber) {
 		Preconditions.checkArgument(level >= 0);
 		Preconditions.checkArgument(fileNumber >= 0);
-		deletedFiles.put(level, fileNumber);
+		if(deletedFiles.get(level) == null) {
+			deletedFiles.put(level, new ArrayList<>());
+		}
+		deletedFiles.get(level).add(fileNumber);
 	}
 	/**
 	 * 设置增加的文件信息 
@@ -108,9 +120,27 @@ public class VersionEdit{
 	public void addFile(int level, FileMetaData fileMetaData) {
 		Preconditions.checkArgument(level >= 0);
 		Preconditions.checkNotNull(fileMetaData);
-		newFiles.put(level, fileMetaData);
+		if(newFiles.get(level) == null) {
+			newFiles.put(level, new ArrayList<>());
+		}
+		newFiles.get(level).add(fileMetaData);
 	}
-	
+	/**
+	 * 一组file合并到newFiles中
+	 * @param files
+	 */
+	public void addFiles(Map<Integer, List<FileMetaData>> files) {
+		Preconditions.checkNotNull(files);
+		// 将newFiles和参数中files合并
+		files.forEach((level, list) -> {
+			if(newFiles.get(level) == null) {
+				newFiles.put(level, list);
+			}
+			else {
+				newFiles.get(level).addAll(list);
+			}
+		});
+	}
 	//getter and setter
 	public void setComparatorName(String comparatorName) {
 		this.comparatorName = comparatorName;
@@ -139,5 +169,9 @@ public class VersionEdit{
 	public void setCompactPointer(int level, InternalKey levelLargest) {
 		compactPointers.put(level, levelLargest);
 	}
+	public void setCompactPointers(Map<Integer, InternalKey> compactPointersMap) {
+		compactPointers.putAll(compactPointersMap);
+	}
+
 
 }

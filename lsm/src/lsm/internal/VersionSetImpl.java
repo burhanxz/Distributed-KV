@@ -1,6 +1,7 @@
 package lsm.internal;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -14,6 +15,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 
+import io.netty.buffer.ByteBuf;
+import lsm.Current;
+import lsm.LogWriter;
 import lsm.TableCache;
 import lsm.Version;
 import lsm.VersionBuilder;
@@ -32,11 +36,11 @@ public class VersionSetImpl implements VersionSet{
 	/**
 	 * manifest 文件编号为1
 	 */
-	private final static long MANIFEST_FILENUM = 1;
+	private final static long INIT_MANIFEST_FILENUM = 1;
 	/**
 	 * 除manifest以外的文件，编号从2开始
 	 */
-	private final AtomicLong nextFileNumber = new AtomicLong(MANIFEST_FILENUM + 1);
+	private final AtomicLong nextFileNumber = new AtomicLong(INIT_MANIFEST_FILENUM + 1);
 	/**
 	 * 数据库工作目录
 	 */
@@ -45,6 +49,10 @@ public class VersionSetImpl implements VersionSet{
 	 * manifest，也称为描述日志
 	 */
 	private LogWriter manifest;
+	/**
+	 * manifest文件编号
+	 */
+	private long manifestFileNumber;
 	private final TableCache tableCache;
 	/**
 	 * 存放所有version
@@ -142,7 +150,7 @@ public class VersionSetImpl implements VersionSet{
 	}
 
 	@Override
-	public void logAndApply(VersionEdit edit) {
+	public void logAndApply(VersionEdit edit) throws IOException {
 		// TODO Auto-generated method stub
 		// edit信息设置到versionSet字段中
 		// 如果edit中已经包含一些信息,检查这些信息
@@ -169,7 +177,30 @@ public class VersionSetImpl implements VersionSet{
 		Version version = builder.build();
 		// 对version中的每一级sstable做一个评估，选择score最高的level作为需要compact的level（compaction_level_），评估是根据每个level上文件的大小（level 你，n>0）和数量(level 0)
 		setLevelAndScore(version);
-		// TODO 将edit信息持久化到manifest
+		// 将edit信息持久化到manifest
+		boolean newManifest = false;
+		if(manifest == null) {
+			edit.setNextFileNumber(nextFileNumber.get());
+			// TODO
+			manifest = null;
+			// 记录当前version信息
+			VersionEdit tmpEdit = new VersionEdit();
+			tmpEdit.setComparatorName(Options.INTERNAL_KEY_COMPARATOR_NAME);
+			tmpEdit.setCompactPointers(compactPointers);
+			tmpEdit.addFiles(current.getFiles());
+			// 序列化edit信息
+			ByteBuf record = tmpEdit.encode();
+			// 将edit信息写入日志
+			manifest.addRecord(record, false);
+			newManifest = true;
+		}
+		// 将现在的edit序列化并写入manifest
+		ByteBuf record = edit.encode();
+		manifest.addRecord(record, true);
+		// 将manifest文件信息记录到current文件中
+		if(newManifest) {
+			Current.INSTANCE.setCurrentFile(databaseDir, manifestFileNumber);
+		}
 		// 把得到的version最终放入versionSet中
 		appendVersion(version);
 		logNumber = edit.getLogNumber();
