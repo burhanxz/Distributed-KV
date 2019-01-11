@@ -108,4 +108,15 @@ public class VersionImpl implements Version{
 			return levels.get(level - 1).getFiles();
 		}
 	}
+	@Override
+	public void addFile(int level, FileMetaData fileMetaData) {
+		Preconditions.checkArgument(level - 1 < levels.size());
+		if(level == 0) {
+			level0.addFile(fileMetaData);
+		}
+		else {
+			levels.get(level - 1).addFile(fileMetaData);
+		}
+		
+	}
 }

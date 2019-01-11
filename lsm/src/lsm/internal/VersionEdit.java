@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import com.google.common.base.Preconditions;
@@ -171,6 +172,15 @@ public class VersionEdit{
 	}
 	public void setCompactPointers(Map<Integer, InternalKey> compactPointersMap) {
 		compactPointers.putAll(compactPointersMap);
+	}
+	public Map<Integer, InternalKey> getCompactPointers() {
+		return compactPointers;
+	}
+	public Map<Integer, List<Long>> getDeletedFiles() {
+		return deletedFiles;
+	}
+	public Map<Integer, List<FileMetaData>> getNewFiles() {
+		return newFiles;
 	}
 
 

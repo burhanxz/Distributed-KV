@@ -331,4 +331,8 @@ public class VersionSetImpl implements VersionSet{
 	public Version getCurrent() {
 		return current;
 	}
+	@Override
+	public void setCompactPointers(Map<Integer, InternalKey> compactionPointers4Set) {
+		compactPointers.putAll(compactionPointers4Set);
+	}
 }

@@ -1,8 +1,10 @@
 package lsm;
 
 import java.io.IOException;
+import java.util.Map;
 
 import lsm.base.Compaction;
+import lsm.base.InternalKey;
 import lsm.internal.VersionEdit;
 
 public interface VersionSet {
@@ -41,4 +43,9 @@ public interface VersionSet {
 	 * @return
 	 */
 	public Version getCurrent();
+	/**
+	 * 将指定compact pointers数据设置进version set的compact pointers中
+	 * @param compactionPointers4Set
+	 */
+	public void setCompactPointers(Map<Integer, InternalKey> compactionPointers4Set);
 }

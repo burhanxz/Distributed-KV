@@ -36,6 +36,12 @@ public interface Version {
 	 */
 	public void release();
 	/**
+	 * 向指定层级加入文件
+	 * @param level
+	 * @param fileMetaData
+	 */
+	public void addFile(int level, FileMetaData fileMetaData);	
+	/**
 	 * 获取某层所有file信息
 	 * @param level 层数
 	 * @return 所有文件信息
@@ -91,6 +97,6 @@ public interface Version {
 	 * @return 满足条件的最高层级
 	 */
 //	public int pickLevelForMemTableOutput(ByteBuf smallest, ByteBuf largest);
-	
+
 	
 }
