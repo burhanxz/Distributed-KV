@@ -31,19 +31,53 @@ import lsm.base.InternalKey;
  *
  */
 public class SSTableBuilderImpl implements SSTableBuilder {
+	/**
+	 * 填充区原始大小
+	 */
 	private static final int PADDING_CONSTANTS = 40;
+	/**
+	 * Footer魔数
+	 */
 	private static final long MAGIC_NUMBER = 0xdb4775248b80fb57L;
+	/**
+	 * block中重启点间隔
+	 */
 	private final int interval;
+	/**
+	 * block限制大小
+	 */
 	private final int blockSize;
+	/**
+	 * table绑定文件通道
+	 */
 	private final FileChannel fileChannel;
+	/**
+	 * 存放k-v数据的block
+	 */
 	private BlockBuilder dataBlock;
+	/**
+	 * 存放过滤信息
+	 */
 	private MetaBlockBuilder metaBlock;
+	/**
+	 * 存放data block的索引信息
+	 */
 	private BlockBuilder indexBlock; 
+	/**
+	 * 存放meta block的索引信息
+	 */
 	private BlockBuilder metaIndexBlock;
-	
+	/**
+	 * 判断当前data block是否完成数据写入
+	 */
 	private volatile boolean finishDataBlock = false;
+	/**
+	 * 记录上一个block的大小
+	 */
 	private volatile int lastBlockSize;
-
+	/**
+	 * 判断table builder是否写入完成
+	 */
 	private volatile boolean isFinished = false;
 	
 	public SSTableBuilderImpl(int interval, int blockSize, FileChannel fileChannel) {
@@ -115,6 +149,14 @@ public class SSTableBuilderImpl implements SSTableBuilder {
 	
 	/**
 	 * handle指的是位置和大小信息
+	
+	public SSTableBuilderImpl(int interval, int blockSize, FileChannel fileChannel) {
+		this.interval = interval;
+		this.blockSize = blockSize;
+		this.fileChannel = fileChannel;
+		// TODO 
+	}
+	
 	 * @param offset 偏置,即起始位置
 	 * @param size 大小
 	 * @return handle的字节数据
