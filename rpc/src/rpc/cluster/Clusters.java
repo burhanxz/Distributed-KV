@@ -7,16 +7,8 @@ public class Clusters {
 	 * @return
 	 */
 	public static Cluster newCluster(Strategy strategy) {
-		Cluster cluster = null;
-		switch (strategy) {
-		case IPHash:
-			cluster = new IPHashCluster();
-			break;
-		case Polling:
-		default:
-			cluster = new IPHashCluster();
-		}
-		return cluster;
+		// TODO
+		return null;
 	}
 
 	/**
