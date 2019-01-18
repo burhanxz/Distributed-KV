@@ -10,7 +10,7 @@
 
 
 客户端初始化序列图:<br>
-![image](https://github.com/burhanxz/Distributed-KV/blob/master/doc/rpc%E6%A8%A1%E5%9D%97%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%88%9D%E5%A7%8B%E5%8C%96%E5%BA%8F%E5%88%97%E5%9B%BE.png)<br>
+![image](https://github.com/burhanxz/Distributed-KV/blob/master/doc/rpc%E6%A8%A1%E5%9D%97%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%88%9D%E5%A7%8B%E5%8C%961.png)<br>
 <br>
 客户端运行时序列图:<br>
 ![image](https://github.com/burhanxz/Distributed-KV/blob/master/doc/rpc%E6%A8%A1%E5%9D%97%E8%BF%90%E8%A1%8C%E6%97%B6%E5%BA%8F%E5%88%97%E5%9B%BE.png)<br>
