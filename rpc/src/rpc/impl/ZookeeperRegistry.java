@@ -7,12 +7,16 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher.Event;
 import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
+
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 
 import rpc.NotifyListener;
 import rpc.Registry;
@@ -34,14 +38,29 @@ import rpc.URL;
  *
  */
 public class ZookeeperRegistry implements Registry{
+	/**
+	 * zk连接超时时间
+	 */
 	private static final int ZK_CONNECT_TIMEOUT = 1000;
+	/**
+	 * zookeeper客户端
+	 */
 	private ZooKeeper zk;
+	/**
+	 * zk注册中心全局锁
+	 */
 	private final Lock mutex = new ReentrantLock();
+	/**
+	 * 连接状态锁
+	 */
 	private final Condition connCondition = mutex.newCondition(); 
 	/**
 	 * 注册中心url
 	 */
 	private final URL registryUrl;
+	/**
+	 * 标识zookeeper连接中心是否可用
+	 */
 	private volatile boolean isAvailable; 
 	public ZookeeperRegistry(URL registryUrl) throws IOException {
 		this.registryUrl = registryUrl;
@@ -94,6 +113,47 @@ public class ZookeeperRegistry implements Registry{
 		
 	}
 	
+	private class ChildrenWatcher implements Watcher{
+		/**
+		 * 监视器所监视的zk路径
+		 */
+		private String path;
+		/**
+		 * url列表的监听器
+		 */
+		private NotifyListener listener;
+		public ChildrenWatcher(String path, NotifyListener listener){
+			this.path = path;
+			this.listener = listener;
+		}
+		@Override
+		public void process(WatchedEvent event) {
+			// 如果和zk服务器保持连接中
+			if(event.getState() == KeeperState.SyncConnected) {
+				switch(event.getType()) {
+				// providers子节点发生改变，更新服务列表
+				case NodeChildrenChanged:{
+					try {
+						// 获取发生变动的列表，重置监听器
+						List<String> paths = zk.getChildren(path, this);
+						// 通知listener
+						doNotify(listener, paths);
+					} catch (KeeperException e) {		
+						e.printStackTrace();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+				default :{
+					//TODO
+				}
+				}
+			}
+
+		}
+		
+	}
+	
 	@Override
 	public URL getUrl() {
 		return registryUrl;
@@ -125,30 +185,69 @@ public class ZookeeperRegistry implements Registry{
 	/**
 	 * zookeeper操作：
 	 * 1. getChildren /appKey/service/providers/, watcher 获取IP节点列表
-	 * 2. getData IP/, no watcher 获取service provider信息
-	 * 3. create /appKey/service/consumers/IP 注册信息到IP节点
-	 * 4. setData IP/ 设置消费者信息
+	 * 2. create /appKey/service/consumers/IP 注册信息到IP节点
 	 * 
 	 * watcher监视IP节点列表的变化
-	 * @param url
+	 * @param url service url
 	 * @param listener
+	 * @throws Exception 
 	 */
 	@Override
-	public void subscribe(URL url, NotifyListener listener) {
-		// TODO Auto-generated method stub
-		
+	public void subscribe(URL url, NotifyListener listener) throws Exception {
+		Preconditions.checkNotNull(url);
+		Preconditions.checkNotNull(url.getPath());
+		Preconditions.checkNotNull(listener);
+		// 生成provider路径
+		String providerPath = getProviderPath(url);
+		// 获取IP节点列表
+		// 新建watcher监听节点目录变化
+		Watcher watcher = new ChildrenWatcher(providerPath, listener);
+		// 获取IP节点列表
+		List<String> paths = zk.getChildren(providerPath, watcher);
+		// 通知listener
+		doNotify(listener, paths);
+		// 注册信息到IP节点
+		// 生成consumer路径
+		String consumerPath = getConsumerPath(url);
+		// 创建consumer节点
+		zk.create(consumerPath, "".getBytes(), null, CreateMode.EPHEMERAL);
 	}
-
+	/**
+	 * 实际执行listener回调
+	 * @param listener 
+	 * @param paths 获取的zk路径信息
+	 */
+	private void doNotify(NotifyListener listener, List<String> paths) {
+		// 新建不可变url列表的builder
+		ImmutableList.Builder<URL> listBuilder = ImmutableList.builder();
+		// 将所有获取的path全部转化成url并放入列表
+		paths.forEach(p -> {
+			URL u = URL.builder().str(p).build();
+			listBuilder.add(u);
+		});
+		// 新建url缓存
+		List<URL> urls = listBuilder.build();
+		// 回调监听器
+		listener.notify(urls);
+	}
 	/**
 	 * zookeeper操作:
 	 * 1. delete /appkey/service/consumer/IP
-	 * @param url
+	 * @param url service url
 	 * @param listener
+	 * @throws Exception 
 	 */
 	@Override
-	public void unsubscribe(URL url, NotifyListener listener) {
-		// TODO Auto-generated method stub
-		
+	public void unsubscribe(URL url, NotifyListener listener) throws Exception {
+		Preconditions.checkNotNull(url);
+		Preconditions.checkNotNull(url.getPath());
+		Preconditions.checkNotNull(listener);
+		// 生成consumer路径
+		String consumerPath = getConsumerPath(url);
+		// 删除zk上的路径
+		zk.delete(consumerPath, 0);
+		// 传入空列表，回调监听器
+		listener.notify(ImmutableList.of());
 	}
 
 	/**
@@ -156,11 +255,44 @@ public class ZookeeperRegistry implements Registry{
 	 * 1. getChildren /appKey/service/providers/
 	 * @param url
 	 * @return
+	 * @throws Exception 
 	 */
 	@Override
-	public List<URL> lookup(URL url) {
-		// TODO Auto-generated method stub
+	public List<URL> lookup(URL url) throws Exception {
+		Preconditions.checkNotNull(url);
+		Preconditions.checkNotNull(url.getPath());
+		// 生成provider路径
+		String providerPath = getProviderPath(url);
+		// 获取IP节点列表
+		List<String> paths = zk.getChildren(providerPath, false);
+		// 新建不可变url列表的builder
+		ImmutableList.Builder<URL> listBuilder = ImmutableList.builder();
+		// 将所有获取的path全部转化成url并放入列表
+		paths.forEach(p -> {
+			URL u = URL.builder().str(p).build();
+			listBuilder.add(u);
+		});
+		// 新建url缓存
+		List<URL> urls = listBuilder.build();
+		return urls;
+	}
+	
+	/**
+	 * 形如: /appKey/service/providers/
+	 * @param url
+	 * @return
+	 */
+	private String getProviderPath(URL url) {
+		// TODO
 		return null;
 	}
-
+	
+	/**
+	 * 形如: /appKey/service/consumers/IP
+	 * @param url
+	 * @return
+	 */
+	private String getConsumerPath(URL url) {
+		return null;
+	}
 }

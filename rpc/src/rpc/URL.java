@@ -2,7 +2,12 @@ package rpc;
 
 import java.util.Map;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 
 /**
  * URL格式是 host:port/path/parameters
@@ -19,7 +24,7 @@ public class URL {
 	}
 	public static class Builder{
 		private URL url = new URL();
-		private StringBuilder sb = new StringBuilder();
+		private StringBuilder pathSb = new StringBuilder();
 		private Builder() {}
 		public Builder host(String host) {
 			url.host = host;
@@ -29,8 +34,22 @@ public class URL {
 			url.port = port;
 			return this;
 		}
+		public Builder str(String url) {
+			// TODO
+			return this;
+		}
+		public Builder bytes(byte[] bytes) {
+			// 生成字符串并分割
+			String connectStr = new String(bytes);
+			String[] strs = connectStr.split(":");
+			Preconditions.checkArgument(strs.length == 2);
+			// 设置host和port
+			url.host = strs[0];
+			url.port = Integer.valueOf(strs[1]);
+			return this;
+		}
 		public Builder appendPath(String path) {
-			sb.append("/").append(path);
+			pathSb.append("/").append(path);
 			return this;
 		}
 		public Builder appendParameter(String key, String value) {
@@ -39,7 +58,7 @@ public class URL {
 		}
 		public URL build() {
 			// 将string builder中的数据合成字符串返回
-			url.path = sb.toString();
+			url.path = pathSb.toString();
 			return url;
 		}
 	} 

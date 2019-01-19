@@ -81,7 +81,7 @@ public class ConsumerConfig<T> implements FactoryBean<T>, InitializingBean, Disp
 		// TODO Auto-generated method stub
 	}
 	
-	private T getProxy(Class<T> clazz){
+	private T getProxy(Class<T> clazz) throws Exception{
 		// TODO 建立注册中心url，传入类型信息
 		URL subscribeUrl = null;
 		// 创建directory
