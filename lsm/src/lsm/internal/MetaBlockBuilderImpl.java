@@ -3,8 +3,6 @@ package lsm.internal;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import lsm.FilterPolicy;
