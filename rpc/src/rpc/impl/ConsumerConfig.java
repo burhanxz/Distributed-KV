@@ -47,6 +47,8 @@ public class ConsumerConfig<T> implements FactoryBean<T>, InitializingBean, Disp
 	 */
 	@Override
 	public void afterPropertiesSet() throws Exception {
+		// 设置destroy状态
+		destroyed = false;
 		// 初始化cluster
 		cluster = clusterStrategy.newInstance();
 		// 初始化register
@@ -80,7 +82,7 @@ public class ConsumerConfig<T> implements FactoryBean<T>, InitializingBean, Disp
 	}
 	
 	private T getProxy(Class<T> clazz){
-		// 建立注册中心url，传入类型信息
+		// TODO 建立注册中心url，传入类型信息
 		URL subscribeUrl = null;
 		// 创建directory
 		NotifiedDirectroy<T> directory = new NotifiedDirectroy<T>();
@@ -132,8 +134,4 @@ public class ConsumerConfig<T> implements FactoryBean<T>, InitializingBean, Disp
 	public void setTargetInterface(Class<T> targetInterface) {
 		this.targetInterface = targetInterface;
 	}
-
-
-
-
 }
