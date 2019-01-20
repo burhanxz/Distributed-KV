@@ -1,5 +1,7 @@
 package rpc;
 
+import java.util.Map;
+
 /**
  * 存放一次方法调用所需的信息
  * @author bird
@@ -21,4 +23,9 @@ public interface Invocation {
 	 * @return
 	 */
 	public Object[] getArgs();
+	/**
+	 * 返回invocation配置
+	 * @return
+	 */
+	public Map<String, String> getAttachments();
 }

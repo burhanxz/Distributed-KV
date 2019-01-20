@@ -9,7 +9,7 @@ import rpc.Invoker;
  * @author bird
  *
  */
-public class FailfastClusterImpl implements Cluster{
+public class FailfastCluster implements Cluster{
 
 	@Override
 	public <T> Invoker<T> join(Directory<T> directory) {

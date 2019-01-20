@@ -19,6 +19,7 @@ public class ConsumerConfig<T> implements FactoryBean<T>, InitializingBean, Disp
 	private ProxyFactory proxyFactory;
 	private volatile boolean destroyed;
 	private T ref;
+	private URL localUrl;
     /**
      * 服务接口
      */
@@ -47,6 +48,8 @@ public class ConsumerConfig<T> implements FactoryBean<T>, InitializingBean, Disp
 	 */
 	@Override
 	public void afterPropertiesSet() throws Exception {
+		// TODO 组装本地url即consumer url
+		localUrl = null;
 		// 设置destroy状态
 		destroyed = false;
 		// 初始化cluster
