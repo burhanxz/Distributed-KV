@@ -84,8 +84,8 @@ public class ConsumerConfig<T> implements FactoryBean<T>, InitializingBean, Disp
 	private T getProxy(Class<T> clazz) throws Exception{
 		// TODO 建立注册中心url，传入类型信息
 		URL subscribeUrl = null;
-		// 创建directory
-		NotifiedDirectroy<T> directory = new NotifiedDirectroy<T>();
+		// TODO 创建directory
+		NotifiedDirectroy<T> directory = null;
 		// 将directory作为监听器，订阅注册中心消息
 		registry.subscribe(subscribeUrl, directory);
 		// 将directory作为invoker集合，通过cluster合并成一个虚拟invoker

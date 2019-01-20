@@ -15,6 +15,7 @@ import io.netty.buffer.UnpooledByteBufAllocator;
  *
  */
 public class URL {
+	private ProtocolType protocol;
 	private String host;
 	private int port;
 	private String path;
@@ -26,6 +27,10 @@ public class URL {
 		private URL url = new URL();
 		private StringBuilder pathSb = new StringBuilder();
 		private Builder() {}
+		public Builder protocol(ProtocolType protocol) {
+			url.protocol = protocol;
+			return this;
+		}
 		public Builder host(String host) {
 			url.host = host;
 			return this;
@@ -71,6 +76,9 @@ public class URL {
 		sb.append(host).append(':').append(port);
 		return sb.toString();
 	}
+	public ProtocolType getProtocol() {
+		return protocol;
+	}
 	public String getHost() {
 		return host;
 	}
@@ -91,5 +99,32 @@ public class URL {
 		mapBuilder.putAll(parameters);
 		// 建立不可变map并返回
 		return mapBuilder.build();
+	}
+	
+	/**
+	 * 协议类型:消费者，生产者和注册中心
+	 * @author bird
+	 *
+	 */
+	public enum ProtocolType{
+		Consumer("consumer", 1), Provider("provider", 2), Registry("registry", 0);
+		/**
+		 * 类型字符串
+		 */
+		private String typeName;
+		/**
+		 * 枚举类标识
+		 */
+		private int id;
+		private ProtocolType(String typeName, int id) {
+			this.typeName = typeName;
+			this.id = id;
+		}
+		public String getTypeName() {
+			return typeName;
+		}
+		public int getId() {
+			return id;
+		}
 	}
 }
