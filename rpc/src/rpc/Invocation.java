@@ -2,6 +2,8 @@ package rpc;
 
 import java.util.Map;
 
+import rpc.Invocation.Builder;
+
 /**
  * 存放一次方法调用所需的信息
  * @author bird
@@ -28,4 +30,12 @@ public interface Invocation {
 	 * @return
 	 */
 	public Map<String, String> getAttachments();
+	
+	public interface Builder{
+		public Builder methodName(String methodName);
+		public Builder parameterTypes(Class<?>[] parameterTypes);
+		public Builder args(Object[] args);
+		public Builder attachment(String key, String value);
+		public Invocation build();
+	}
 }
