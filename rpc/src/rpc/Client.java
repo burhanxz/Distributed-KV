@@ -1,5 +1,13 @@
 package rpc;
 
+import java.util.concurrent.Future;
+
 public interface Client {
-	public ResultFuture request(Invocation invocation) throws Exception;
+	/**
+	 * 
+	 * @param invocation
+	 * @return
+	 * @throws Exception
+	 */
+	public Future<Result> request(Invocation invocation) throws Exception;
 }

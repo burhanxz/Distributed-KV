@@ -12,4 +12,6 @@ public class RequestConstants {
 	public static final String UNIQUEKEY = "uniqueKey";
 	public static final String TIMEOUT = "timeout";
 	public static final String APP = "app";
+	// 默认值
+	public static int TIMEOUT_DEFAULT = 5000; //ms
 }

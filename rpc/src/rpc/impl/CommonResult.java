@@ -1,11 +1,25 @@
 package rpc.impl;
 
 import rpc.Result;
-import rpc.ResultFuture;
 
+
+/**
+ * 普通result实现
+ * @author bird
+ *
+ */
 public class CommonResult implements Result{
+	/**
+	 * 是否有exception
+	 */
 	private boolean hasException;
+	/**
+	 * 存放的异常对象
+	 */
 	private Throwable exception;
+	/**
+	 * 普通对象
+	 */
 	private Object value;
 	
 	public CommonResult(boolean hasException, Throwable exception, Object value) {

@@ -13,8 +13,8 @@ public class FailfastCluster implements Cluster{
 
 	@Override
 	public <T> Invoker<T> join(Directory<T> directory) {
-		// TODO Auto-generated method stub
-		return null;
+		// 返回适用于failfast规则的Invoker
+		return new FailfastClusterInvoker<>(directory);
 	}
 
 }
