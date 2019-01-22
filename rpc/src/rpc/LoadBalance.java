@@ -15,5 +15,5 @@ public interface LoadBalance {
 	 * @param invocation
 	 * @return
 	 */
-	public <T> List<Invoker<T>> select(List<Invoker<T>> invokers, URL url, Invocation invocation);
+	public <T> Invoker<T> select(List<Invoker<T>> invokers, URL url, Invocation invocation);
 }

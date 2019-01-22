@@ -7,6 +7,7 @@ package rpc.model;
  *
  */
 public class RequestConstants {
+	public static final String LOAD_BALANCE = "loadBalance";
 	public static final String IS_ASYNC = "isAsync"; 
 	public static final String UNIQUEKEY = "uniqueKey";
 	public static final String TIMEOUT = "timeout";

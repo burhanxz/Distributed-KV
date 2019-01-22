@@ -1,5 +1,5 @@
 package rpc;
 
 public interface Client {
-	public ResultFuture request(Invocation invocation);
+	public ResultFuture request(Invocation invocation) throws Exception;
 }

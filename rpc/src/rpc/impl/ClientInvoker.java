@@ -28,7 +28,7 @@ public class ClientInvoker<T> implements Invoker<T>{
 	}
 
 	@Override
-	public Result invoke(Invocation invocation) {
+	public Result invoke(Invocation invocation) throws Exception {
 		// 获取invocation配置信息
 		Map<String, String> attachments = invocation.getAttachments();
 		String isAsynStr = attachments.get(RequestConstants.IS_ASYNC);
