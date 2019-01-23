@@ -5,10 +5,6 @@ import java.util.Map;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.buffer.UnpooledByteBufAllocator;
-
 /**
  * URL格式是 host:port/path/parameters
  * @author bird
@@ -76,7 +72,7 @@ public class URL {
 	public String connectString() {
 		StringBuilder sb = new StringBuilder();
 		sb.append(host).append(':').append(port);
-		return sb.toString();
+		return sb.toString().intern();
 	}
 	public ProtocolType getProtocol() {
 		return protocol;

@@ -1,6 +1,6 @@
 package rpc;
 
-public interface Invoker<T> {
+public interface Invoker<T> extends Node{
 	/**
 	 * 获取执行体中的接口类型
 	 * @return

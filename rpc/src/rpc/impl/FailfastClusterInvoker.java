@@ -9,6 +9,7 @@ import rpc.Invocation;
 import rpc.Invoker;
 import rpc.LoadBalance;
 import rpc.Result;
+import rpc.URL;
 import rpc.loadBalance.RandomLB;
 import rpc.model.RequestConstants;
 

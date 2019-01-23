@@ -63,4 +63,18 @@ public class ClientInvoker<T> implements Invoker<T>{
 		Result result = future.get(timeout, TimeUnit.MILLISECONDS);
 		return result;
 	}
+	@Override
+	public URL getUrl() {
+		return remoteUrl;
+	}
+	@Override
+	public boolean isAvailable() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+	@Override
+	public void destroy() {
+		// TODO Auto-generated method stub
+		
+	}
 }

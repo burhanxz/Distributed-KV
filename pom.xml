@@ -4,6 +4,7 @@
 	<groupId>distributed-kv</groupId>
 	<artifactId>distributed-kv-master</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
 	<properties>
 		<!-- main version setting -->
 		<spring.version>4.1.9.RELEASE</spring.version>
@@ -129,7 +130,7 @@
 	</dependencies>
 
 
-	<packaging>pom</packaging>
+	
 	<modules>
 		<module>rpc</module>
 		<module>lsm</module>

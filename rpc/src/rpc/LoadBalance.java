@@ -10,8 +10,8 @@ import java.util.List;
 public interface LoadBalance {
 	/**
 	 * 通过策略从服务列表中选择一个invoker
-	 * @param invokers
-	 * @param url
+	 * @param invokers 执行体，代表远程物理节点
+	 * @param url 本地url
 	 * @param invocation
 	 * @return
 	 */

@@ -3,6 +3,7 @@ package rpc.impl;
 import rpc.Invocation;
 import rpc.Invoker;
 import rpc.Result;
+import rpc.URL;
 
 /**provider方所用invoker
  * @author bird
@@ -21,6 +22,24 @@ public class ProxyInvoker<T> implements Invoker<T>{
 	public Result invoke(Invocation invocation) {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public URL getUrl() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public boolean isAvailable() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public void destroy() {
+		// TODO Auto-generated method stub
+		
 	}
 
 }
