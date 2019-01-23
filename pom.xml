@@ -7,7 +7,7 @@
 	<packaging>pom</packaging>
 	<properties>
 		<!-- main version setting -->
-		<spring.version>4.1.9.RELEASE</spring.version>
+		<spring.version>4.3.17.RELEASE</spring.version>
 	</properties>
 	<build>
 		<sourceDirectory>src</sourceDirectory>
