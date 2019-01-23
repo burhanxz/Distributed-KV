@@ -16,4 +16,5 @@ public class ConsumerConstants {
     public static final String TIMEOUT = "timeout";
     public static final String APPKEY = "appkey";
     public static final String GROUP = "group";
+    public static final String RETRY = "retry";
 }

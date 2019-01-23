@@ -31,6 +31,7 @@ public class RpcInvocationHandler implements InvocationHandler{
 		invocationBuilder.parameterTypes(method.getParameterTypes());
 		invocationBuilder.args(args);
 		// TODO 注入配置参数
+		
 		invocationBuilder.attachment(null, null);
 		// 获取invocation对象
 		Invocation invocation = invocationBuilder.build();

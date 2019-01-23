@@ -66,9 +66,8 @@ public class FailfastClusterInvoker<T> extends ClusterInvoker<T> {
 		// 负载均衡选择出唯一invoker
 		Invoker<T> invoker = loadBalance.select(invokers, directory.getUrl(), invocation);
 		// invoker根据invocation执行调用
-		Result result = null;
 		try {
-			result = invoker.invoke(invocation);
+			Result result = invoker.invoke(invocation);
 			return result;
 		} catch (Exception e) {
 			// 如果调用失败，不进行重试，直接抛出异常
