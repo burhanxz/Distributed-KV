@@ -47,9 +47,8 @@ public class ClientInvoker<T> implements Invoker<T>{
 		// 获取超时时间
 		String timeoutStr = attachments.get(RequestConstants.TIMEOUT);
 		int timeout = timeoutStr == null ? RequestConstants.TIMEOUT_DEFAULT : Integer.parseInt(timeoutStr);
-		// 判断是否异步
-		String isAsynStr = attachments.get(RequestConstants.IS_ASYNC);
 		// 判断是否设置为异步
+		String isAsynStr = attachments.get(RequestConstants.IS_ASYNC);
 		boolean isAsyn = false;
 		if(isAsynStr != null && Boolean.parseBoolean(isAsynStr)) {
 			isAsyn = true;
@@ -63,8 +62,5 @@ public class ClientInvoker<T> implements Invoker<T>{
 		// 阻塞同步
 		Result result = future.get(timeout, TimeUnit.MILLISECONDS);
 		return result;
-		
 	}
-
-
 }

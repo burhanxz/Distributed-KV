@@ -15,6 +15,8 @@ import io.netty.buffer.UnpooledByteBufAllocator;
  *
  */
 public class URL {
+	public static final String PATH_SPLIT = "/";
+	public static final String IP_SPLIT = ":";
 	private ProtocolType protocol;
 	private String host;
 	private int port;

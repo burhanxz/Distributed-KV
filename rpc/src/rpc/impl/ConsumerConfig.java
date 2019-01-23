@@ -114,6 +114,9 @@ public class ConsumerConfig<T> implements FactoryBean<T>, InitializingBean, Disp
 		cluster = clusterClazz.newInstance();
 		// 初始化register
 		registry = ZookeeperRegistryFactory.getInstance().getRegistry(registryUrl);
+		if(registry == null) {
+			throw new Exception("注册中心不可用");
+		}
 		// 初始化proxyFactory
 		proxyFactory = JdkProxyFactory.getInstance();
 	}

@@ -2,7 +2,7 @@ package rpc.impl;
 
 import java.io.IOException;
 import java.util.List;
-
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableList;
 import rpc.NotifyListener;
 import rpc.Registry;
 import rpc.URL;
+import rpc.model.ConsumerConstants;
 
 /**
  * ZK节点格式：
@@ -63,6 +64,7 @@ public class ZookeeperRegistry implements Registry{
 	 */
 	private volatile boolean isAvailable; 
 	public ZookeeperRegistry(URL registryUrl) throws IOException {
+		Preconditions.checkNotNull(registryUrl);
 		this.registryUrl = registryUrl;
 		init();
 	}
@@ -73,12 +75,13 @@ public class ZookeeperRegistry implements Registry{
 	private void init() throws IOException {
 		// 获取zookeeper连接IP
 		String connectString = registryUrl.connectString();
+		Preconditions.checkNotNull(connectString);
 		mutex.lock();
 		try {
 			// 新建zookeeper连接
 			zk = new ZooKeeper(connectString, ZK_CONNECT_TIMEOUT, new ConnectionWatcher());
-			// 等待连接完成
-			connCondition.await();
+			// 等待连接完成,超时时间设置为2倍zk连接超时时间
+			connCondition.await(ZK_CONNECT_TIMEOUT << 1, TimeUnit.MILLISECONDS);
 			// 设置初始状态
 			this.isAvailable = true;
 		} catch (InterruptedException e) {
@@ -101,7 +104,7 @@ public class ZookeeperRegistry implements Registry{
 					// 唤醒等待连接成功的线程
 					mutex.lock();
 					try {
-						// 唤醒
+						// 唤醒等待连接成功的线程
 						connCondition.signalAll();
 					} finally {
 						mutex.unlock();
@@ -283,8 +286,7 @@ public class ZookeeperRegistry implements Registry{
 	 * @return
 	 */
 	private String getProviderPath(URL url) {
-		// TODO
-		return null;
+		return url.getPath();
 	}
 	
 	/**
@@ -293,6 +295,21 @@ public class ZookeeperRegistry implements Registry{
 	 * @return
 	 */
 	private String getConsumerPath(URL url) {
-		return null;
+		// 获取path
+		String path = getProviderPath(url);
+		String[] pathStrs = path.split(URL.PATH_SPLIT);
+		Preconditions.checkNotNull(pathStrs);
+		// 正确格式 /appKey/service/providers/ 至少有三个分隔
+		Preconditions.checkArgument(pathStrs.length >= 3);
+		String appKey = pathStrs[0];
+		String service = pathStrs[1];
+		StringBuilder builder = new StringBuilder();
+		// 组装/appKey/service/consumers/IP格式
+		builder.append(URL.PATH_SPLIT)
+			   .append(appKey).append(URL.PATH_SPLIT)
+			   .append(service).append(URL.PATH_SPLIT)
+			   .append(ConsumerConstants.CONSUMERS).append(URL.PATH_SPLIT)
+		       .append(url.connectString());
+		return builder.toString();
 	}
 }

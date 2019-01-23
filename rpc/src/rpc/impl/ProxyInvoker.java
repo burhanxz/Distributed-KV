@@ -4,6 +4,11 @@ import rpc.Invocation;
 import rpc.Invoker;
 import rpc.Result;
 
+/**provider方所用invoker
+ * @author bird
+ *
+ * @param <T>
+ */
 public class ProxyInvoker<T> implements Invoker<T>{
 
 	@Override

@@ -52,7 +52,7 @@ public class FailfastClusterInvoker<T> extends ClusterInvoker<T> {
 			lbClazz = (Class<? extends LoadBalance>) clazz;
 		}
 		Preconditions.checkNotNull(lbClazz);
-		// 创建loadBalance实例
+		// TODO 创建loadBalance实例
 		LoadBalance loadBalance = null;
 		// 捕获和调用无关的异常
 		try {
