@@ -1,6 +1,7 @@
 package rpc.impl;
 
 import java.lang.reflect.Proxy;
+import java.util.Map;
 
 import com.google.common.base.Preconditions;
 
@@ -29,12 +30,12 @@ public class JdkProxyFactory implements ProxyFactory{
 	}
 	@SuppressWarnings("unchecked")
 	@Override
-	public <T> T getProxy(Invoker<T> invoker) {
+	public <T> T getProxy(Invoker<T> invoker, Map<String, String> options) {
 		Preconditions.checkNotNull(invoker);
 		// 利用java原生动态代理来获取代理对象
 		return (T) Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(),
 				new Class<?>[]{invoker.getInterface()}, 
-				new RpcInvocationHandler(invoker));
+				new RpcInvocationHandler(invoker, options));
 	}
 
 	@Override

@@ -9,6 +9,7 @@ import java.lang.reflect.Method;
  *
  */
 public class ConsumerConstants {
+	public static final String CONSUMERS = "consumers";
 	public static final String IP ="ip";
 	public static final String HOST = "host";
     public static final String SERVICE = "service";
@@ -16,5 +17,5 @@ public class ConsumerConstants {
     public static final String TIMEOUT = "timeout";
     public static final String APPKEY = "appkey";
     public static final String GROUP = "group";
-    public static final String RETRY = "retry";
+    
 }

@@ -10,7 +10,7 @@ public class InvocationImpl implements Invocation{
 	private String methodName;
 	private Class<?>[] parameterTypes;
 	private Object[] args;
-	private ImmutableMap<String, String> attachments;
+	private ImmutableMap<String, String> options;
 	
 	private InvocationImpl() {}
 	
@@ -38,13 +38,18 @@ public class InvocationImpl implements Invocation{
 			return this;
 		}
 		@Override
-		public Builder attachment(String key, String value) {
+		public Builder option(String key, String value) {
 			builder.put(key, value);
 			return this;
 		}
 		@Override
+		public Builder options(Map<String, String> options) {
+			builder.putAll(options);
+			return null;
+		}
+		@Override
 		public Invocation build() {
-			invocation.attachments = builder.build();
+			invocation.options = builder.build();
 			return invocation;
 		}
 	}
@@ -65,8 +70,8 @@ public class InvocationImpl implements Invocation{
 	}
 
 	@Override
-	public Map<String, String> getAttachments() {
-		return attachments;
+	public Map<String, String> getOptions() {
+		return options;
 	}
 
 }

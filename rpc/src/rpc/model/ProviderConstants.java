@@ -7,6 +7,7 @@ package rpc.model;
  *
  */
 public class ProviderConstants {
+	public static final String PROVIDERS = "providers";
 	public static final String SERVICE = "service";
 	public static final String IMPLEMENT = "implement";
 	public static final String METHOD = "method";

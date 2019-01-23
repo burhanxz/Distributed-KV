@@ -29,13 +29,14 @@ public interface Invocation {
 	 * 返回invocation配置
 	 * @return
 	 */
-	public Map<String, String> getAttachments();
+	public Map<String, String> getOptions();
 	
 	public interface Builder{
 		public Builder methodName(String methodName);
 		public Builder parameterTypes(Class<?>[] parameterTypes);
 		public Builder args(Object[] args);
-		public Builder attachment(String key, String value);
+		public Builder option(String key, String value);
+		public Builder options(Map<String, String> options);
 		public Invocation build();
 	}
 }

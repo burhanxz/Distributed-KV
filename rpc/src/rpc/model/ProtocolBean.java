@@ -1,6 +1,6 @@
 package rpc.model;
 
-public class ProtocalBean {
+public class ProtocolBean {
 	private int port;
 
 	public int getPort() {

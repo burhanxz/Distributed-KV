@@ -31,7 +31,7 @@ public class FailfastClusterInvoker<T> extends ClusterInvoker<T> {
 		// directory列出注册中心拉取的服务列表、经过路由选择，筛选出的invoker
 		List<Invoker<T>> invokers = directory.list(invocation);
 		// 从invocation中选取负载均衡器
-		String loadBalanceStrategy = invocation.getAttachments().get(RequestConstants.LOAD_BALANCE);
+		String loadBalanceStrategy = invocation.getOptions().get(RequestConstants.LOAD_BALANCE);
 		// 获取loadBalance类型
 		Class<? extends LoadBalance> lbClazz = null;
 		if(loadBalanceStrategy == null) {

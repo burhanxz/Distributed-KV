@@ -1,12 +1,25 @@
 package rpc.model;
 
-public class ConsumerBean {
+import org.springframework.beans.factory.InitializingBean;
+
+public class ConsumerBean implements InitializingBean{
 	private String interfaceClazz;
 	private int timeout;
 	private boolean retry;
 	private boolean isAsync;
 	private String loadBalance;
 	private String clusterStrategy;
+	/**
+	 * 检查参数是否合法
+	 * @throws Exception
+	 */
+	@Override
+	public void afterPropertiesSet() throws Exception {
+		// 不合法则抛出classNotFoundException
+		Class.forName(interfaceClazz);
+		Class.forName(loadBalance);
+		Class.forName(clusterStrategy);
+	}
 	public String getInterfaceClazz() {
 		return interfaceClazz;
 	}
@@ -43,4 +56,5 @@ public class ConsumerBean {
 	public void setClusterStrategy(String clusterStrategy) {
 		this.clusterStrategy = clusterStrategy;
 	}
+
 }
