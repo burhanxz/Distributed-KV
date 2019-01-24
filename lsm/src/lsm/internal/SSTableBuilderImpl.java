@@ -40,6 +40,10 @@ public class SSTableBuilderImpl implements SSTableBuilder {
 	 */
 	private static final long MAGIC_NUMBER = 0xdb4775248b80fb57L;
 	/**
+	 * 默认的meta block filter参数, 11 即每 1 << 11 B的数据产生一个filter数据
+	 */
+	private static final int DEFAULT_FILTER_BASE_LG = 11;
+	/**
 	 * block中重启点间隔
 	 */
 	private final int interval;
@@ -79,12 +83,24 @@ public class SSTableBuilderImpl implements SSTableBuilder {
 	 * 判断table builder是否写入完成
 	 */
 	private volatile boolean isFinished = false;
+	/**
+	 * 上一个写入的数据
+	 */
+	private ByteBuf lastKey;
 	
 	public SSTableBuilderImpl(int interval, int blockSize, FileChannel fileChannel) {
+		Preconditions.checkState(fileChannel.isOpen());
 		this.interval = interval;
 		this.blockSize = blockSize;
 		this.fileChannel = fileChannel;
-		// TODO 
+		// 初始化data block builder 
+		dataBlock = new BlockBuilderImpl(interval);
+		// 初始化meta block builder
+		metaBlock = new MetaBlockBuilderImpl(DEFAULT_FILTER_BASE_LG, new BloomFilter());
+		// 初始化indexBlock builder
+		indexBlock = new BlockBuilderImpl(interval);
+		// 初始化meta index block
+		metaIndexBlock = new BlockBuilderImpl(interval);
 	}
 	
 	@Override
@@ -97,7 +113,7 @@ public class SSTableBuilderImpl implements SSTableBuilder {
 		Preconditions.checkState(!isFinished, "builder过程已经结束");
 		// 在写完一个data block之后，新写一个data block之前，写index block
 		if(finishDataBlock) {
-			handleBlock();
+			handleBlock(key);
 		}
 		// 向data block中添加数据
 		dataBlock.add(key, value);
@@ -107,6 +123,7 @@ public class SSTableBuilderImpl implements SSTableBuilder {
 		if((lastBlockSize = dataBlock.size()) >= blockSize) {
 			// 将data block持久化到filechannel
 			serializeDataBlock();
+			lastKey = key;
 		}
 
 	}
@@ -116,6 +133,7 @@ public class SSTableBuilderImpl implements SSTableBuilder {
 	 * @throws IOException
 	 */
 	private void serializeDataBlock() throws IOException {
+		Preconditions.checkNotNull(dataBlock);
 		// 获取data block字节数据
 		ByteBuf dataBlockBytes = dataBlock.finish();
 		// data block写入文件
@@ -130,9 +148,11 @@ public class SSTableBuilderImpl implements SSTableBuilder {
 	 * 当一个block写完的时候，写入meta block和index block
 	 * @throws IOException
 	 */
-	private void handleBlock() throws IOException {
-		// TODO 计算分界key
-		ByteBuf divide = null;
+	private void handleBlock(ByteBuf currentKey) throws IOException {
+		Preconditions.checkState(dataBlock == null);
+		Preconditions.checkNotNull(lastKey);
+		// 计算分界key
+		ByteBuf divide = getSeparator(lastKey, currentKey);
 		// 生成索引块
 		int blockSize = lastBlockSize;
 		int blockOffset = (int) fileChannel.position() - blockSize;
@@ -140,23 +160,15 @@ public class SSTableBuilderImpl implements SSTableBuilder {
 		ByteBuf handle = getHandle(blockOffset, blockSize);
 		// 写入到index block
 		indexBlock.add(divide, handle);
-		// TODO 重置
+		// 重置data block状态，新建data block
 		finishDataBlock = !finishDataBlock;
-		dataBlock = null;
+		dataBlock = new BlockBuilderImpl(interval);
 		// 记录前一个data block的filter信息
 		metaBlock.startBlock((int)fileChannel.position());
 	}
 	
 	/**
 	 * handle指的是位置和大小信息
-	
-	public SSTableBuilderImpl(int interval, int blockSize, FileChannel fileChannel) {
-		this.interval = interval;
-		this.blockSize = blockSize;
-		this.fileChannel = fileChannel;
-		// TODO 
-	}
-	
 	 * @param offset 偏置,即起始位置
 	 * @param size 大小
 	 * @return handle的字节数据
@@ -169,14 +181,72 @@ public class SSTableBuilderImpl implements SSTableBuilder {
 		return handle;
 	}
 	
+    /**
+     * TODO 待测试
+     * 获取不小于start并且不大于limit的ByteBuf作为两个data block之间的分隔符
+     * @param start 下界
+     * @param limit 上界
+     * @return
+     */
+    public ByteBuf getSeparator(ByteBuf start, ByteBuf limit)
+    {
+    	Preconditions.checkNotNull(start);
+    	if(limit == null) {
+    		return start.slice();
+    	}
+    	ByteBuf separator = null;
+    	ByteBuf initialStart = start;
+    	// 计算公共前缀长度
+    	limit = limit.slice();
+		start = start.slice();
+		// 公共前缀长度
+		int len = 0;
+		// 当两个bytebuf还有剩余数据的时候，逐一查看其字节是否相等
+		while(start.readableBytes() > 0 && limit.readableBytes() > 0) {
+			if(start.readByte() == limit.readByte()) {
+				len++;
+			}
+			else {
+				break;
+			}
+		}
+    	// 如果start完全是limit的前缀，则以start为分隔符
+		if(start.readableBytes() == 0) {
+			separator = initialStart.slice();
+		}
+    	// 把start非公共部分的第一个字节+1，得到一个新的key,如果这个key不大于limit，则key为分隔符
+		else {
+			// 获取当前位置的字节
+			Byte oldByte = start.getByte(len);
+			// 如果字节达到最大值
+			if(oldByte == Byte.MAX_VALUE) {
+				separator = initialStart.slice();
+			}
+			else {
+				Byte newByte = (byte) (oldByte + 1);
+				// 如果字节+1后超过了limit同位置上的数据
+				if(newByte > limit.getByte(len)) {
+					separator = initialStart.slice();
+				}
+				else {
+					// TODO 拷贝可读数据，将第一个字节设置为newByte
+					separator = start.copy();
+					separator.setByte(0, newByte);
+				}
+			}
+		}
+    	// 否则，返回start作为分隔符
+        return start;
+    }
 	@Override
 	public void finish() throws IOException {
+		// 如果dataBlock
 		if(dataBlock != null) {
 			serializeDataBlock();
 		}
 		// 对最后一个data block写入index block和meta block信息
 		if(finishDataBlock) {
-			handleBlock();
+			handleBlock(null);
 		}
 		// 获取meta block及其handle信息
 		ByteBuf metaBlockBytes = metaBlock.finish();

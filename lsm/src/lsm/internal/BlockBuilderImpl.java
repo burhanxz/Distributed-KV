@@ -61,27 +61,16 @@ public class BlockBuilderImpl implements BlockBuilder{
 		if(count % interval == 0) {
 			// 如果是重启点，记录重启点位置
 			restartPoints.add(block.writerIndex());
-			// 记录现场
-//			ByteBufUtils.markIndex(key);
 			// 写record
 			writeRecord(0, key.readableBytes(), value.readableBytes(), key, value);
-			// 恢复
-//			ByteBufUtils.resetIndex(key);
-
 		}
 		else {
 			// 如果不是重启点，计算共享长度，非共享长度
 			LOG.debug("key size = " + key.readableBytes());
 			int sharedLen = sharedLen(lastKey, key);
 			int nonSharedLen = key.readableBytes() - sharedLen;
-			// 记录现场
-//			ByteBufUtils.markIndex(key);
-			// key调整读指针
-//			key.readerIndex(key.readerIndex() + sharedLen);
 			// 写record
 			writeRecord(sharedLen, nonSharedLen, value.readableBytes(), key, value);
-			// 恢复
-//			ByteBufUtils.resetIndex(key);
 		}
 		// 更新lastkey
 		lastKey = key;
@@ -143,16 +132,19 @@ public class BlockBuilderImpl implements BlockBuilder{
 	 * @return
 	 */
 	private int sharedLen(ByteBuf lastKey, ByteBuf key) {
+		Preconditions.checkNotNull(lastKey);
+		Preconditions.checkNotNull(key);
 		key = key.slice();
-		int minLen = Math.min(lastKey.readableBytes(), key.readableBytes());
+		lastKey = lastKey.slice();
+		// 公共前缀长度
 		int len = 0;
-		// TODO 检验
-		while(minLen-- >= 0) {
+		// 当两个bytebuf还有剩余数据的时候，逐一查看其字节是否相等
+		while(lastKey.readableBytes() > 0 && key.readableBytes() > 0) {
 			if(lastKey.readByte() == key.readByte()) {
 				len++;
 			}
 			else {
-				return len;
+				break;
 			}
 		}
 		return len;

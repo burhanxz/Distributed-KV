@@ -15,7 +15,7 @@ public interface BlockBuilder {
 	 */
 	public int count();
 	/**
-	 * block实际大小
+	 * block实际大小, 应当和Block::getFullBlockSize大小一致
 	 * @return
 	 */
 	public int size();

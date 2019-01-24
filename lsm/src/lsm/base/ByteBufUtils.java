@@ -7,8 +7,18 @@ import java.nio.channels.FileChannel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 
+/**
+ * ByteBuf 工具类
+ * @author bird
+ *
+ */
 public class ByteBufUtils {
-		
+	/**
+	 * 将buffer中的数据写入文件
+	 * @param channel
+	 * @param buffer
+	 * @throws IOException
+	 */
 	public static void write(FileChannel channel, ByteBuf buffer) throws IOException {
 		// 建立bytebuffer以便写入文件
 		ByteBuffer tmpBuffer = ByteBuffer.allocate(buffer.readableBytes());
@@ -18,6 +28,12 @@ public class ByteBufUtils {
 		tmpBuffer.flip();
 		channel.write(tmpBuffer);
 	}
+	/**
+	 * 读取文件数据到ByteBuf中
+	 * @param channel
+	 * @param buffer
+	 * @throws IOException
+	 */
 	public static void read(FileChannel channel, ByteBuf buffer) throws IOException {
 		// 建立bytebuffer以便写入文件
 		ByteBuffer tmpBuffer = ByteBuffer.allocate(buffer.readableBytes());
@@ -27,6 +43,10 @@ public class ByteBufUtils {
 		// bytebuffer写入byteBuf
 		buffer.writeBytes(tmpBuffer);
 	}
+	/**
+	 * 批量记录索引位置
+	 * @param buffers
+	 */
 	public static void markIndex(ByteBuf... buffers) {
 		for(ByteBuf buffer : buffers) {
 			// 记录bytebuf信息
@@ -34,7 +54,10 @@ public class ByteBufUtils {
 			buffer.markWriterIndex();
 		}
 	}
-	
+	/**
+	 * 批量恢复索引位置
+	 * @param buffers
+	 */
 	public static void resetIndex(ByteBuf... buffers) {
 		for(ByteBuf buffer : buffers) {
 			// 恢复bytebuf信息
@@ -42,6 +65,11 @@ public class ByteBufUtils {
 			buffer.resetWriterIndex();
 		}
 	}
+	/**
+	 * ByteBuf内容生成字符串
+	 * @param buf
+	 * @return
+	 */
 	public static String buf2Str(ByteBuf buf) {
 	    String str;
 	    // 处理堆缓冲区
