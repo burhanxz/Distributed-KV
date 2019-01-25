@@ -109,7 +109,14 @@ public class InternalKey{
 		buff.writeLong(info);
 		return buff;
 	}
-
+	/**
+	 * 计算internalKey的大小
+	 * @return
+	 */
+	public int size() {
+		return userKey.readableBytes() + Integer.BYTES + Long.BYTES;
+	}
+	
 	/**
 	 * 获取实际key
 	 * @return

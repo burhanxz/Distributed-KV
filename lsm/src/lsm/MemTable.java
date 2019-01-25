@@ -1,15 +1,21 @@
 package lsm;
 
+import java.util.Map.Entry;
+
 import io.netty.buffer.ByteBuf;
 import lsm.base.InternalKey;
+import lsm.base.InternalKey.InternalKeyType;
+import lsm.base.LookupKey;
+import lsm.base.LookupResult;
 
 // TODO
-public interface MemTable extends SeekingIterable<InternalKey, ByteBuf>{
+public interface MemTable extends Iterable<Entry<InternalKey, ByteBuf>>{
+	public void add(long seq, InternalKeyType type, ByteBuf key, ByteBuf value);
 	/**
 	 * 获取memtable大小
 	 * @return
 	 */
-	public int size();
+	public long size();
 	
 	/**
 	 * 判断memtable是否为空
@@ -22,5 +28,5 @@ public interface MemTable extends SeekingIterable<InternalKey, ByteBuf>{
 	 * @param key 键
 	 * @return
 	 */
-	public ByteBuf get(InternalKey key);
+	public LookupResult get(LookupKey key);
 }

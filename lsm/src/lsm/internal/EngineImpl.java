@@ -7,6 +7,7 @@ import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -343,7 +344,7 @@ public class EngineImpl {
 		compactionLock.lock();
 		try {
 			// 遍历迭代器
-			SeekingIterator<InternalKey, ByteBuf> iter = mem.iterator();
+			Iterator<Entry<InternalKey, ByteBuf>> iter = mem.iterator();
 			while (iter.hasNext()) {
 				Entry<InternalKey, ByteBuf> entry = iter.next();
 				InternalKey key = entry.getKey();
