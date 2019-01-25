@@ -70,16 +70,17 @@ public class MetaBlockImpl implements MetaBlock{
 		// 寻找第一个不和终止位置相同的filter offset作为起始位置
 		int filterStartOffset = 0;
 		for(int i = n - 1; i >= 0; i--) {
-			if(filterOffsets[i] != filterOffsets[n - 1]) {
+			if(filterOffsets[i] != filterOffsets[n]) {
 				filterStartOffset = filterOffsets[i];
 				break;
 			}
 		}
-		LOG.debug("filterEndOffset = " + filterEndOffset);
-		LOG.debug("filterStartOffset = " + filterStartOffset);
 		// 切片，获取实际filter数据
 		ByteBuf filter = filters.slice(filters.readerIndex() + filterStartOffset, filterEndOffset - filterStartOffset);
-		LOG.debug("filter size = " + filter.readableBytes());
+		// 获取filter中包含的offset信息，做校验
+		int offset = filter.slice().getInt(filter.writerIndex() - Integer.BYTES);
+		filter = filter.slice(filter.readerIndex(), filter.readableBytes() - Integer.BYTES);
+		Preconditions.checkArgument(blockOffset == offset, String.format("blockOffset %d 对应的filter出错, offset应为 %d", blockOffset, offset));
 		// 调用过滤器
 		boolean exists = filterPolicy.keyMayMatch(key, filter);
 		return exists;

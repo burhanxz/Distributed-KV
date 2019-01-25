@@ -4,7 +4,7 @@ import io.netty.buffer.ByteBuf;
 
 /**
  * meta block 结构
- * | filters(各个filter数据) | filter offsets(各个filter数据的大小) | sum(filter数据总大小) | kFilterBaseLg(基数，代表多少字节的data block产生一个meta block) |  
+ * | filters(各个filter数据) | filter offsets(各个filter数据的大小) | sum(filter数据总大小) | kFilterBaseLg(基数，代表多少字节的data block产生一个meta block) | 
  * @author bird
  *
  */

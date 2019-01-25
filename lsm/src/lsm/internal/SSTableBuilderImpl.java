@@ -1,6 +1,8 @@
 package lsm.internal;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Map.Entry;
@@ -9,11 +11,14 @@ import com.google.common.base.Preconditions;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import lsm.BlockBuilder;
 import lsm.MetaBlockBuilder;
 import lsm.SSTableBuilder;
 import lsm.base.ByteBufUtils;
+import lsm.base.FileUtils;
 import lsm.base.InternalKey;
+import lsm.base.Options;
 
 /**
  * sstable典型格式:
@@ -43,6 +48,7 @@ public class SSTableBuilderImpl implements SSTableBuilder {
 	 * 默认的meta block filter参数, 11 即每 1 << 11 B的数据产生一个filter数据
 	 */
 	private static final int DEFAULT_FILTER_BASE_LG = 11;
+	private static final ByteBuf FILTER = Unpooled.wrappedBuffer("bloom filter".getBytes());
 	/**
 	 * block中重启点间隔
 	 */
@@ -88,11 +94,12 @@ public class SSTableBuilderImpl implements SSTableBuilder {
 	 */
 	private ByteBuf lastKey;
 	
-	public SSTableBuilderImpl(int interval, int blockSize, FileChannel fileChannel) {
-		Preconditions.checkState(fileChannel.isOpen());
+	public SSTableBuilderImpl(int interval, int blockSize, File databaseDir, long fileNumber) throws IOException {
+		Preconditions.checkState(databaseDir.exists() && databaseDir.isDirectory());
+		File file = FileUtils.newSSTableFile(databaseDir, fileNumber);
 		this.interval = interval;
 		this.blockSize = blockSize;
-		this.fileChannel = fileChannel;
+		this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
 		// 初始化data block builder 
 		dataBlock = new BlockBuilderImpl(interval);
 		// 初始化meta block builder
@@ -136,6 +143,8 @@ public class SSTableBuilderImpl implements SSTableBuilder {
 		Preconditions.checkNotNull(dataBlock);
 		// 获取data block字节数据
 		ByteBuf dataBlockBytes = dataBlock.finish();
+		// 更新last block size
+		lastBlockSize = dataBlockBytes.readableBytes();
 		// data block写入文件
 		ByteBufUtils.write(fileChannel, dataBlockBytes);
 		// 清除data block
@@ -188,7 +197,7 @@ public class SSTableBuilderImpl implements SSTableBuilder {
      * @param limit 上界
      * @return
      */
-    public ByteBuf getSeparator(ByteBuf start, ByteBuf limit)
+    public static ByteBuf getSeparator(ByteBuf start, ByteBuf limit)
     {
     	Preconditions.checkNotNull(start);
     	if(limit == null) {
@@ -197,46 +206,49 @@ public class SSTableBuilderImpl implements SSTableBuilder {
     	ByteBuf separator = null;
     	ByteBuf initialStart = start;
     	// 计算公共前缀长度
-    	limit = limit.slice();
-		start = start.slice();
+    	limit = limit.copy();
+		start = start.copy();
 		// 公共前缀长度
 		int len = 0;
 		// 当两个bytebuf还有剩余数据的时候，逐一查看其字节是否相等
 		while(start.readableBytes() > 0 && limit.readableBytes() > 0) {
 			if(start.readByte() == limit.readByte()) {
 				len++;
+				// 如果start完全是limit的前缀，则以start为分隔符
+				if(start.readableBytes() == 0) {
+					separator = initialStart.slice();
+					return separator;
+				}
 			}
 			else {
 				break;
 			}
 		}
-    	// 如果start完全是limit的前缀，则以start为分隔符
-		if(start.readableBytes() == 0) {
+
+    	
+    	// 把start非公共部分的第一个字节+1，得到一个新的key,如果这个key不大于limit，则key为分隔符
+		// 获取当前位置的字节
+		Byte oldByte = start.getByte(len);
+		// 如果字节达到最大值
+		if(oldByte == Byte.MAX_VALUE) {
 			separator = initialStart.slice();
 		}
-    	// 把start非公共部分的第一个字节+1，得到一个新的key,如果这个key不大于limit，则key为分隔符
 		else {
-			// 获取当前位置的字节
-			Byte oldByte = start.getByte(len);
-			// 如果字节达到最大值
-			if(oldByte == Byte.MAX_VALUE) {
+			Byte newByte = (byte) (oldByte + 1);
+			// 如果字节+1后超过了limit同位置上的数据
+			if(newByte > limit.getByte(len)) {
 				separator = initialStart.slice();
 			}
 			else {
-				Byte newByte = (byte) (oldByte + 1);
-				// 如果字节+1后超过了limit同位置上的数据
-				if(newByte > limit.getByte(len)) {
-					separator = initialStart.slice();
-				}
-				else {
-					// TODO 拷贝可读数据，将第一个字节设置为newByte
-					separator = start.copy();
-					separator.setByte(0, newByte);
-				}
+				// 拷贝可读数据，将第一个字节设置为newByte
+				separator = initialStart.copy();
+				separator.setByte(len, newByte);
+				separator = separator.slice(0, len + 1);
 			}
 		}
+
     	// 否则，返回start作为分隔符
-        return start;
+        return separator;
     }
 	@Override
 	public void finish() throws IOException {
@@ -253,7 +265,7 @@ public class SSTableBuilderImpl implements SSTableBuilder {
 		ByteBuf metaBlockHandle = getHandle((int) fileChannel.position(), metaBlockBytes.readableBytes());
 		// 写入meta index block信息
 		// TODO key为filter policy的名字
-		metaIndexBlock.add(null, metaBlockHandle);
+		metaIndexBlock.add(FILTER, metaBlockHandle);
 		//将meta block序列化到文件
 		ByteBufUtils.write(fileChannel, metaBlockBytes);
 		// 获取index block及其handle
@@ -271,17 +283,19 @@ public class SSTableBuilderImpl implements SSTableBuilder {
 		// footer中magic占8B，footer总大小48B
 		// 获取填充数据
 		ByteBuf padding = PooledByteBufAllocator.DEFAULT.buffer(PADDING_CONSTANTS - indexBlockHandle.readableBytes() - metaIndexBlockHandle.readableBytes());
+		padding.writerIndex(padding.capacity());
 		// 获取魔数
 		ByteBuf magic = PooledByteBufAllocator.DEFAULT.buffer(2 * Integer.BYTES);
 		magic.writeInt((int) MAGIC_NUMBER);
 		magic.writeInt((int) MAGIC_NUMBER >>> 32);
-		// 将indexBlockHandle, metaIndexBlockHandle, padding, magic序列化到文件
+
 		ByteBufUtils.write(fileChannel, indexBlockHandle);
 		ByteBufUtils.write(fileChannel, metaIndexBlockHandle);
 		ByteBufUtils.write(fileChannel, padding);
 		ByteBufUtils.write(fileChannel, magic);
 		// 修改结束标志
 		isFinished = true;
+		this.fileChannel.close();
 	}
 
 	@Override

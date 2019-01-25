@@ -41,6 +41,6 @@ public class FileUtils {
 	
     private static String makeFileName(long number, String suffix)
     {
-        return String.format("%06d.%s", number, suffix);
+        return String.format("%06d%s", number, suffix);
     }
 }

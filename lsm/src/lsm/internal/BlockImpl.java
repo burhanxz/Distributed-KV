@@ -28,7 +28,7 @@ public class BlockImpl implements Block{
 		this.block = block.slice();
 		// 获取数据尾端4B作为重启点数目
 		restarts = block.slice(block.writerIndex() - Integer.BYTES, Integer.BYTES).readInt();
-		System.out.println("restarts = " + restarts);
+		LOG.debug("restarts = " + restarts);
 		restartPointers = new ArrayList<>(restarts);
 		// 重启点占数据总大小
 		int restartPointerSize = restarts * 4;

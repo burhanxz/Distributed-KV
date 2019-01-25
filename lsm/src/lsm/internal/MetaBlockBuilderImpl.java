@@ -44,7 +44,7 @@ public class MetaBlockBuilderImpl implements MetaBlockBuilder{
 		int filters = blockOffset >> kFilterBaseLg;
 		// 如果理论filter数量大于实际filter数量，则生成新的filter
 		while(filters > filterOffsets.size()) {
-			generateFilter();
+			generateFilter(blockOffset);
 		}
 	}
 
@@ -69,8 +69,9 @@ public class MetaBlockBuilderImpl implements MetaBlockBuilder{
 
 	/**
 	 * 产生filter数据，将filter偏置写入filter offset
+	 * @param block位置
 	 */
-	private void generateFilter() {
+	private void generateFilter(int blockOffset) {
 		// 如果keys是空的，则将result的大小直接放入filter offsets
 		if(keys.isEmpty()) {
 			filterOffsets.add(result.readableBytes());
@@ -78,16 +79,12 @@ public class MetaBlockBuilderImpl implements MetaBlockBuilder{
 		else {
 			// 将keys提取出来，生成filter数据
 			ByteBuf filter = filterPolicy.createFilter(keys);
-			System.out.println("filter = " + filter.readableBytes());
 			// 将filter加入到result中
 			result.writeBytes(filter);
+			// 将对应的offset加入到result中
+			result.writeInt(blockOffset);
 			// 将当前result大小加入到filter offsets中
 			filterOffsets.add(result.readableBytes());
-			System.out.print("[ ");
-			filterOffsets.forEach(i -> {
-				System.out.print(i + " ");
-			});
-			System.out.println(" ]");
 			// 清空keys
 			keys.clear();
 		}

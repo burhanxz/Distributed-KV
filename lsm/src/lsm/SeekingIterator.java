@@ -4,8 +4,9 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 
 /**
- * @author bird
  * 增强的Iterator
+ * @author bird
+ * 
  * @param <K> 键类型
  * @param <V> 值类型
  */
@@ -18,7 +19,7 @@ public interface SeekingIterator<K,V> extends Iterator<Entry<K,V>>{
 	public Entry<K,V> peek();
 	
 	/**
-	 * 指针移动到key对应的位置
+	 * 指针移动到第一个 >= key 的位置
 	 * @param key 键
 	 * @return
 	 */

@@ -6,6 +6,7 @@ import java.nio.channels.FileChannel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
 
 /**
  * ByteBuf 工具类
@@ -36,7 +37,7 @@ public class ByteBufUtils {
 	 */
 	public static void read(FileChannel channel, ByteBuf buffer) throws IOException {
 		// 建立bytebuffer以便写入文件
-		ByteBuffer tmpBuffer = ByteBuffer.allocate(buffer.readableBytes());
+		ByteBuffer tmpBuffer = ByteBuffer.allocate(buffer.capacity());
 		// 文件数据写入buffer
 		channel.read(tmpBuffer);
 		tmpBuffer.flip();
@@ -82,6 +83,13 @@ public class ByteBufUtils {
 	        str = new String(bytes, 0, buf.readableBytes());
 	    }
 	    return str;
+	}
+	/**字符串转byteBuf
+	 * @param str
+	 * @return
+	 */
+	public static ByteBuf str2Buf(String str) {
+		return Unpooled.wrappedBuffer(str.getBytes());
 	}
 
 }

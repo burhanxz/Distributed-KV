@@ -57,6 +57,8 @@ public class BlockBuilderImpl implements BlockBuilder{
     
 	@Override
 	public void add(ByteBuf key, ByteBuf value) {
+		Preconditions.checkNotNull(key, "key is null");
+		Preconditions.checkNotNull(value, "value is null");
 		// 判断是否是重启点
 		if(count % interval == 0) {
 			// 如果是重启点，记录重启点位置
@@ -109,8 +111,8 @@ public class BlockBuilderImpl implements BlockBuilder{
 		Preconditions.checkArgument(sharedLen >= 0);
 		Preconditions.checkArgument(nonSharedLen >= 0);
 		Preconditions.checkArgument(valueLen >= 0);
-		Preconditions.checkNotNull(key);
-		Preconditions.checkNotNull(value);
+		Preconditions.checkNotNull(key, "key is null");
+		Preconditions.checkNotNull(value, "value is null");
 		LOG.debug("sharedLen = " + sharedLen);
 		LOG.debug("nonSharedLen = " + nonSharedLen);
 		LOG.debug("valueLen = " + valueLen);
