@@ -11,8 +11,19 @@ import lsm.Level;
 import lsm.TableCache;
 import lsm.base.FileMetaData;
 
+/**
+ * Level的通用实现
+ * @author bird
+ *
+ */
 public abstract class AbstractLevel implements Level{
+	/**
+	 * 层级
+	 */
 	protected final int level;
+	/**
+	 * 本层所含文件信息
+	 */
 	protected SortedMap<FileMetaData, Long> files;
 	protected TableCache cache;
 	public AbstractLevel(int level, TableCache cache) {

@@ -56,13 +56,14 @@ public class InternalKey{
 	 */
 	public static InternalKey decode(ByteBuf bytebuf) {
 		Preconditions.checkNotNull(bytebuf);
-		
-		ByteBuf userKey = bytebuf.slice(bytebuf.readerIndex(), bytebuf.readableBytes() - Long.BYTES);
-		long info = bytebuf.getLong(bytebuf.writerIndex() - Long.BYTES);
-		// TODO 待验证
+		bytebuf = bytebuf.slice();
+		// bytebuf前 8B 即为info信息
+		long info = bytebuf.readLong();
+		// 将读取的info解析成state和seq信息
 		int state = (int) (info & 0xff);
 		long seq = info >> 8;
-
+		// bytebuf剩余部分即user key
+		ByteBuf userKey = bytebuf.slice();
 		Preconditions.checkArgument(state == 0 || state == 1);		
 		return new InternalKey(userKey, seq, InternalKeyType.getType(state));
 	}
@@ -96,7 +97,7 @@ public class InternalKey{
 	public ByteBuf encode() {
 		ByteBuf buff = PooledByteBufAllocator.DEFAULT.buffer(Long.BYTES + userKey.readableBytes());
 		// info存放seq和类型信息，低8位存放类型信息
-		long info = seq << 8 | (byte) type.getState();
+		long info = seq << 8 | (type.getState() & 0xff);
 		buff.writeLong(info);
 		// 写入user key
 		buff.writeBytes(userKey.slice());
@@ -123,7 +124,7 @@ public class InternalKey{
 	 * @return
 	 */
 	public int size() {
-		return userKey.readableBytes() + Integer.BYTES + Long.BYTES;
+		return userKey.readableBytes() + Long.BYTES;
 	}
 	
 	/**

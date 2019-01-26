@@ -10,6 +10,12 @@ import java.nio.charset.StandardCharsets;
 import lsm.base.FileUtils;
 import lsm.internal.CurrentImpl;
 
+/**
+ * TODO
+ * current信息
+ * @author bird
+ *
+ */
 public interface Current {
 	public static final Current INSTANCE = new CurrentImpl(); 
     /**

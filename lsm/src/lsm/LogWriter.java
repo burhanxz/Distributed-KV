@@ -15,6 +15,10 @@ import lsm.base.InternalKey;
  */
 public interface LogWriter extends Closeable{
 	/**
+	 * log文件 以32KB为单位存取
+	 */
+	public final static int LOG_BLOCK_SIZE = 1 << 15;
+	/**
 	 * 获取绑定log的文件编号
 	 * @return
 	 */
