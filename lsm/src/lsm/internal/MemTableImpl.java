@@ -22,11 +22,12 @@ public class MemTableImpl implements MemTable{
 	 */
 	private ConcurrentSkipListMap<InternalKey, ByteBuf> skipList;
 	/**
-	 * memtable中当前存储的数据的总大小
+	 * memtable中当前存储的数据的总大小,单位: B
 	 */
 	private AtomicLong size;
-	private MemTableImpl() {
+	public MemTableImpl() {
 		skipList = new ConcurrentSkipListMap<>(Options.INTERNAL_KEY_COMPARATOR);
+		size = new AtomicLong(0L);
 	}
 	@Override
 	public Iterator<Entry<InternalKey, ByteBuf>> iterator() {

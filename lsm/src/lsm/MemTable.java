@@ -12,7 +12,7 @@ import lsm.base.LookupResult;
 public interface MemTable extends Iterable<Entry<InternalKey, ByteBuf>>{
 	public void add(long seq, InternalKeyType type, ByteBuf key, ByteBuf value);
 	/**
-	 * 获取memtable大小
+	 * 获取memtable数据量大小, 单位: B
 	 * @return
 	 */
 	public long size();
