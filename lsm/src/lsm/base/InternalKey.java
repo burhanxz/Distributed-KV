@@ -5,6 +5,13 @@ import com.google.common.base.Preconditions;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 
+/**
+ * 包含实际key，序列号和类型（删除或增加）
+ * 序列化结构:
+ * | seq & type (8B) | userKey |
+ * @author bird
+ *
+ */
 public class InternalKey{
 	/**
 	 * 实际输入的key内容
@@ -68,13 +75,14 @@ public class InternalKey{
 	@Deprecated
 	public static InternalKey decodeWithPrefix(ByteBuf bytebuf) {
 		Preconditions.checkNotNull(bytebuf);
-		
-		ByteBuf userKey = bytebuf.slice(bytebuf.readerIndex() + Integer.BYTES, bytebuf.readableBytes() - Integer.BYTES - Long.BYTES);
-		long info = bytebuf.getLong(bytebuf.writerIndex() - Long.BYTES);
-		// TODO 待验证
+		bytebuf = bytebuf.slice();
+		// bytebuf前 8B 即为info信息
+		long info = bytebuf.readLong();
+		// TODO 将读取的info解析成state和seq信息
 		int state = (int) (info & 0xff);
 		long seq = info >> 8;
-		
+		// bytebuf剩余部分即user key
+		ByteBuf userKey = bytebuf.retainedSlice();
 		Preconditions.checkArgument(state == 0 || state == 1);
 		return new InternalKey(userKey, seq, InternalKeyType.getType(state));
 	}
@@ -86,11 +94,12 @@ public class InternalKey{
 	 * @return
 	 */
 	public ByteBuf encode() {
-		ByteBuf buff = PooledByteBufAllocator.DEFAULT.buffer(userKey.readableBytes() + Long.BYTES);
-		buff.writeBytes(userKey.array(), userKey.readerIndex(), userKey.readableBytes());
+		ByteBuf buff = PooledByteBufAllocator.DEFAULT.buffer(Long.BYTES + userKey.readableBytes());
 		// info存放seq和类型信息，低8位存放类型信息
 		long info = seq << 8 | (byte) type.getState();
 		buff.writeLong(info);
+		// 写入user key
+		buff.writeBytes(userKey.slice());
 		return buff;
 	}
 	
