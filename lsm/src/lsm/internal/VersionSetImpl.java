@@ -290,13 +290,13 @@ public class VersionSetImpl implements VersionSet{
 	private List<FileMetaData> getOverlappingInputs(int level, InternalKey smallest, InternalKey largest){
 		Preconditions.checkNotNull(smallest);
 		Preconditions.checkNotNull(largest);
-		Preconditions.checkNotNull(smallest.getKey());
-		Preconditions.checkNotNull(largest.getKey());
+		Preconditions.checkNotNull(smallest.getUserKey());
+		Preconditions.checkNotNull(largest.getUserKey());
 		ImmutableList.Builder<FileMetaData> files = ImmutableList.builder();
 		// 遍历level0层文件，寻找和上述范围有重叠的文件
 		for (FileMetaData fileMetaData : current.getFiles(level)) {
-			if(!(fileMetaData.getLargest().getKey().compareTo(smallest.getKey()) < 0
-					|| fileMetaData.getSmallest().getKey().compareTo(largest.getKey()) > 0)) {
+			if(!(fileMetaData.getLargest().getUserKey().compareTo(smallest.getUserKey()) < 0
+					|| fileMetaData.getSmallest().getUserKey().compareTo(largest.getUserKey()) > 0)) {
 				files.add(fileMetaData);
 			}
 		}

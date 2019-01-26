@@ -57,9 +57,9 @@ public class MemTableImpl implements MemTable{
 	public LookupResult get(LookupKey key) {
 		Preconditions.checkNotNull(key);
 		// 获取skiplist中第一个 >= key的数据
-		Entry<InternalKey, ByteBuf> entry = skipList.ceilingEntry(key.getKey());
+		Entry<InternalKey, ByteBuf> entry = skipList.ceilingEntry(key.getInternalKey());
 		// 如果内置bytebuf相等，则找到数据
-		if(entry != null && entry.getKey().getKey().equals(key.getByteBuf())) {
+		if(entry != null && entry.getKey().getUserKey().equals(key.getUserKey())) {
 			return new LookupResult(key, entry.getValue(), entry.getKey().getType());
 		}
 		return null;

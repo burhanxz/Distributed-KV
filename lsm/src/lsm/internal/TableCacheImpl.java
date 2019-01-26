@@ -63,8 +63,8 @@ public class TableCacheImpl implements TableCache{
 		SSTable sstable = cache.get(fileNumber);
 		// 获取sstable迭代器
 		SeekingIterator<ByteBuf, ByteBuf> iter = sstable.iterator();
-		InternalKey userKey = key.getKey();
-		ByteBuf keyBuffer = userKey.getKey();
+		InternalKey userKey = key.getInternalKey();
+		ByteBuf keyBuffer = userKey.getUserKey();
 		// 移动到key位置
 		iter.seek(keyBuffer);
 		// 如果key存在
@@ -73,7 +73,7 @@ public class TableCacheImpl implements TableCache{
 			Entry<ByteBuf, ByteBuf> entry = iter.next();
 			InternalKey internalKey = InternalKey.decode(entry.getKey());
 			// 如果key确实相等
-			if(internalKey.getKey().equals(userKey.getKey())) {
+			if(internalKey.getUserKey().equals(userKey.getUserKey())) {
 				// 判断key的类型,并生成相应的返回结果
 				if(internalKey.getType() == InternalKey.InternalKeyType.ADD) {
 					return new LookupResult(key, null, InternalKey.InternalKeyType.DELETE);

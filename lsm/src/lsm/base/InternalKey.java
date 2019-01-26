@@ -121,7 +121,7 @@ public class InternalKey{
 	 * 获取实际key
 	 * @return
 	 */
-	public ByteBuf getKey() {
+	public ByteBuf getUserKey() {
 		return userKey;
 	}
 	/**

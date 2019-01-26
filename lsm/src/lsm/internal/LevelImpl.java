@@ -26,7 +26,7 @@ public class LevelImpl extends AbstractLevel{
 		long fileNumber = 0;
 		long fileSize = 0;
 		for(FileMetaData file : files.keySet()) {
-			if(Options.INTERNAL_KEY_COMPARATOR.compare(file.getLargest(), key.getKey()) > 0) {
+			if(Options.INTERNAL_KEY_COMPARATOR.compare(file.getLargest(), key.getInternalKey()) > 0) {
 				fileNumber = files.get(file);
 				fileSize = file.getFileSize();
 				break;

@@ -280,7 +280,7 @@ public class EngineImpl {
 				Entry<ByteBuf, ByteBuf> entry = iter.next();
 				InternalKey thisKey = InternalKey.decode(entry.getKey());
 				// 如果数据重复，抛弃，否则加入到sstable中
-				if (lastKey != null && lastKey.getKey().equals(thisKey.getKey())) {
+				if (lastKey != null && lastKey.getUserKey().equals(thisKey.getUserKey())) {
 					// 抛弃
 				} else {
 					// 不抛弃，处理数据
