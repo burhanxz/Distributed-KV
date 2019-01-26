@@ -1,6 +1,9 @@
 # Distributed-KV
 ## lsm部分
-- 待续
+- LSM论文 "The Log-Structured Merge-Tree" 链接 https://github.com/burhanxz/Distributed-KV/blob/master/doc/The%20Log-Structured%20Merge-Tree <br>
+- "The Log-Structured Merge-Tree"论文链接2: http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.44.2782&rep=rep1&type=pdf
+- LSM介绍:https://www.igvita.com/2012/02/06/sstable-and-log-structured-storage-leveldb/
+
 ## rpc部分
 - one can use this middleware like using java rmi;
 - client pool and long-term connection; 
