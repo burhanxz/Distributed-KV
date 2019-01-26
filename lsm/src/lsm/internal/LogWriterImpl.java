@@ -15,6 +15,7 @@ import lsm.LogWriter;
 import lsm.base.ByteBufUtils;
 import lsm.base.FileUtils;
 import lsm.base.InternalKey;
+import lsm.base.MmapReleaseUtil;
 
 /**
  * 利用mmap实现的log writer
@@ -70,7 +71,8 @@ public class LogWriterImpl implements LogWriter {
 		if(mmap.remaining() < need) {
 			// 将page cache中的数据刷进硬盘
 			mmap.force();
-			// TODO 释放mmap
+			// 释放mmap
+			MmapReleaseUtil.clean(mmap);
 			// 更新位置并且重新申请mmap
 			lastPos += LOG_BLOCK_SIZE;
 			mmap = channel.map(MapMode.READ_WRITE, lastPos, LOG_BLOCK_SIZE);
@@ -122,6 +124,10 @@ public class LogWriterImpl implements LogWriter {
 	@Override
 	public synchronized void close() throws IOException {
 		if(channel.isOpen()) {
+			if(mmap != null) {
+				// 释放mmap
+				MmapReleaseUtil.clean(mmap);
+			}
 			// 获取channel当前位置
 			long size = channel.size();
 			// 确保channel的大小是LOG_BLOCK_SIZE的整数倍
