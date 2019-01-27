@@ -6,6 +6,7 @@ import java.util.Map;
 import com.google.common.collect.ImmutableMap;
 
 import lsm.base.FileMetaData;
+import lsm.base.InternalKey;
 import lsm.base.LookupKey;
 import lsm.base.LookupResult;
 
@@ -22,6 +23,14 @@ public interface Version {
 	 * @throws Exception 
 	 */
 	public LookupResult get(LookupKey key) throws Exception;
+	/**
+	 * 寻找第level层和指定范围有重叠的全部文件信息
+	 * @param level 层数
+	 * @param smallest 最小值
+	 * @param largest 最大值
+	 * @return 所有重叠文件
+	 */
+	public List<FileMetaData> getOverlappingInputs(int level, InternalKey smallest, InternalKey largest);
 	/**
 	 * 获取引用计数
 	 * @return

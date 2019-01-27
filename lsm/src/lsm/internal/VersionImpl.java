@@ -1,17 +1,20 @@
 package lsm.internal;
 
+import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+import java.util.Map.Entry;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 
-import io.netty.buffer.ByteBuf;
 import lsm.Level;
-
 import lsm.Version;
 import lsm.VersionSet;
 import lsm.base.FileMetaData;
+import lsm.base.InternalKey;
 import lsm.base.LookupKey;
 import lsm.base.LookupResult;
 
@@ -20,47 +23,71 @@ public class VersionImpl implements Version{
 	 * 引用计数，当前version被引用的次数
 	 */
 	private final AtomicInteger ref = new AtomicInteger(0);
+	/**
+	 * version所属versionSet
+	 */
 	private final VersionSet versionSet;
-	private final Level level0;
-	private final List<Level> levels;
-
-	// 需要进行合并的level
+	/**
+	 * 第0层
+	 */
+	private final Level0Impl level0;
+	/**
+	 * 存放level > 1的层次，按升序排列
+	 */
+	private final SortedMap<Integer, LevelImpl> levels;
+	/**
+	 * 需要进行合并的level
+	 */
 	private int compactionLevel;
-	// 当score>=1时，也需要进行合并
+	/**
+	 * 需要合并的紧迫程度。当score>=1时，必须进行合并
+	 */
 	private double compactionScore;
 	
 	public VersionImpl(VersionSet versionSet) {
 		this.versionSet = versionSet;
-		//TODO
-		this.level0 = null;
-		this.levels = null;
+		this.level0 = new Level0Impl(versionSet.getTableCache());
+		this.levels = new TreeMap<>();
 	}
 	@Override
 	public LookupResult get(LookupKey key) throws Exception {
-		// 增加引用计数
-//		retain();
 		// 先查找level0
 		LookupResult result = level0.get(key);
 		// 如果没有，再查找所有level
 		if(result != null) {
-			// 减少引用计数
-			release();
 			return result;
 		}
 		else {
-			for(Level level : levels) {
+			// 按Level层级升序查找
+			for(Iterator<Entry<Integer, LevelImpl>> it = levels.entrySet().iterator(); it.hasNext(); ) {
+				Level level = it.next().getValue();
 				result = level.get(key);
+				// 如果查询结果不为空，则返回查询结果
 				if(result != null) {
-					// 减少引用计数
-					release();
 					return result;
 				}
 			}
 		}
-		// 减少引用计数
-//		release();
 		return null;
 	}
+	
+	@Override
+	public List<FileMetaData> getOverlappingInputs(int level, InternalKey smallest, InternalKey largest) {
+		Preconditions.checkNotNull(smallest);
+		Preconditions.checkNotNull(largest);
+		Preconditions.checkNotNull(smallest.getUserKey());
+		Preconditions.checkNotNull(largest.getUserKey());
+		ImmutableList.Builder<FileMetaData> files = ImmutableList.builder();
+		// 遍历level0层文件，寻找和上述范围有重叠的文件
+		for (FileMetaData fileMetaData : getFiles(level)) {
+			if(!(fileMetaData.getLargest().getUserKey().compareTo(smallest.getUserKey()) < 0
+					|| fileMetaData.getSmallest().getUserKey().compareTo(largest.getUserKey()) > 0)) {
+				files.add(fileMetaData);
+			}
+		}
+		return files.build();
+	}
+	
 	@Override
 	public int refs() {
 		return ref.get();
@@ -100,7 +127,7 @@ public class VersionImpl implements Version{
 	}
 	@Override
 	public List<FileMetaData> getFiles(int level) {
-		Preconditions.checkArgument(level - 1 < levels.size());
+		Preconditions.checkArgument(level <= maxLevel() && level >= 0);
 		if(level == 0) {
 			return level0.getFiles();
 		}
@@ -110,13 +137,21 @@ public class VersionImpl implements Version{
 	}
 	@Override
 	public void addFile(int level, FileMetaData fileMetaData) {
-		Preconditions.checkArgument(level - 1 < levels.size());
+		Preconditions.checkArgument(level < VersionSet.MAX_LEVELS && level >= 0);
 		if(level == 0) {
 			level0.addFile(fileMetaData);
 		}
 		else {
-			levels.get(level - 1).addFile(fileMetaData);
+			// 如果没有对应的level，则先创建
+			LevelImpl leveln = null;
+			if((leveln = levels.get(level - 1)) == null){
+				leveln = new LevelImpl(level - 1, versionSet.getTableCache());
+				// 存入levels
+				levels.put(level - 1, leveln);
+			}
+			leveln.addFile(fileMetaData);
 		}
 		
 	}
+
 }

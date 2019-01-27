@@ -45,37 +45,67 @@ public class VersionSetImpl implements VersionSet{
 	 * 数据库工作目录
 	 */
 	private final File databaseDir;
+	private Current current;
 	/**
 	 * manifest，也称为描述日志
 	 */
 	private LogWriter manifest;
 	/**
+	 * TODO 需要初始化
 	 * manifest文件编号
 	 */
-	private long manifestFileNumber;
+	private long manifestFileNumber = INIT_MANIFEST_FILENUM;
+	/**
+	 * 全局唯一table缓存
+	 */
 	private final TableCache tableCache;
 	/**
 	 * 存放所有version
 	 */
 	private final Map<Version, Object> activeVersions = new WeakHashMap<>();
 	/**
+	 * TODO 需要初始化
 	 * 当前version
 	 */
-	private Version current;
+	private Version currentVersion;
 	// edit信息
 	private long lastSequence;
 	private long logNumber;
 	private final Map<Integer, InternalKey> compactPointers = new TreeMap<>();
 	
-	public VersionSetImpl(File databaseDir) {
-		// TODO
+	public VersionSetImpl(File databaseDir, int cacheSize) {
+		Preconditions.checkNotNull(databaseDir);
+		Preconditions.checkArgument(databaseDir.exists() && databaseDir.isDirectory());
+		Preconditions.checkArgument(cacheSize > 0);
 		this.databaseDir = databaseDir;
-		this.tableCache = null;
+		// 指定缓存文件数量，初始化tablecache
+		this.tableCache = new TableCacheImpl(databaseDir, cacheSize);
+		// 初始化空version作为current
+		Version initialVersion = new VersionImpl(this);
+		appendVersion(initialVersion);
+		this.current = new CurrentImpl(databaseDir);
+		// 如果current文件不存在，则初始化current
+		if(!current.exists()) {
+			initCurrent();
+		}
 	}
+	
+	@Override
+	public void recover() {
+		// 获取current文件
+		
+		// 读取current文件中的manifest文件信息
+		// 逐一获取其中的versionEdit信息
+		// 将edit逐一应用到version builder中
+		// version builder获取version
+		// 更新log信息
+		// 更新文件编号信息
+	}
+	
 	@Override
 	public boolean needsCompaction() {
 		// 如果当前version的score大于等于1则说明需要进行compaction操作
-		return current.getCompactionScore() >= 1;
+		return currentVersion.getCompactionScore() >= 1;
 	}
 
 	@Override
@@ -88,12 +118,12 @@ public class VersionSetImpl implements VersionSet{
 		List<FileMetaData> levelInputs = new ArrayList<>();
 		List<FileMetaData> levelUpInputs = new ArrayList<>();
 		// 通过version获取compaction level
-		level = current.getCompactionLevel();
+		level = currentVersion.getCompactionLevel();
 		Preconditions.checkState(level >= 0);
 		Preconditions.checkState(level + 1 < LEVELS);
 		// 遍历level层所有的文件，寻找第一个可compact的文件
-		Preconditions.checkState(!current.getFiles(level).isEmpty());
-		for (FileMetaData fileMetaData : current.getFiles(level)) {
+		Preconditions.checkState(!currentVersion.getFiles(level).isEmpty());
+		for (FileMetaData fileMetaData : currentVersion.getFiles(level)) {
 			// 一个文件如果最大值大于合并点，或者没有合并点，则可以选择作为level inputs
 			if (!compactPointers.containsKey(level)
 					|| Options.INTERNAL_KEY_COMPARATOR.compare(fileMetaData.getLargest(), compactPointers.get(level)) > 0) {
@@ -103,7 +133,7 @@ public class VersionSetImpl implements VersionSet{
 		}
 		// 如果没有合适文件，使用第一个文件即可
 		if (levelInputs.isEmpty()) {
-			FileMetaData fileMetaData = current.getFiles(level).get(0);
+			FileMetaData fileMetaData = currentVersion.getFiles(level).get(0);
 			levelInputs.add(fileMetaData);
 		}
 		// 如果是第0层，还要把所有和上述levelInputs中选中的文件有重叠的文件再次选入
@@ -115,7 +145,7 @@ public class VersionSetImpl implements VersionSet{
 		}
 		// 遍历level+1层文件，寻找所有和指定范围有重叠的文件
 		Preconditions.checkState(!levelInputs.isEmpty());
-		Preconditions.checkState(!current.getFiles(level + 1).isEmpty());
+		Preconditions.checkState(!currentVersion.getFiles(level + 1).isEmpty());
 		// 重新获取level层大小范围
 		Entry<InternalKey, InternalKey> range = getRange(levelInputs);
 		// 按照level层所有文件大小范围，从level+1层获取重叠文件
@@ -139,7 +169,7 @@ public class VersionSetImpl implements VersionSet{
 			}
 		}
 		// 新建compaction
-		Compaction compaction = new Compaction(current, level, levelInputs, levelUpInputs);
+		Compaction compaction = new Compaction(currentVersion, level, levelInputs, levelUpInputs);
 		//更新level层的compact pointer
 		range = getRange(levelInputs);
 		InternalKey levelLargest = range.getValue();
@@ -151,7 +181,6 @@ public class VersionSetImpl implements VersionSet{
 
 	@Override
 	public void logAndApply(VersionEdit edit) throws IOException {
-		// TODO Auto-generated method stub
 		// edit信息设置到versionSet字段中
 		// 如果edit中已经包含一些信息,检查这些信息
 		if (edit.getLogNumber() != null) {
@@ -171,8 +200,7 @@ public class VersionSetImpl implements VersionSet{
 			edit.setLastSequenceNumber(lastSequence);
 		}
 		// 利用versionBuilder和edit，经过多次中间形态,形成最终的version
-		// TODO
-		VersionBuilder builder = null;
+		VersionBuilder builder = new VersionBuilderImpl(this, currentVersion);
 		builder.apply(edit);
 		Version version = builder.build();
 		// 对version中的每一级sstable做一个评估，选择score最高的level作为需要compact的level（compaction_level_），评估是根据每个level上文件的大小（level 你，n>0）和数量(level 0)
@@ -181,13 +209,13 @@ public class VersionSetImpl implements VersionSet{
 		boolean newManifest = false;
 		if(manifest == null) {
 			edit.setNextFileNumber(nextFileNumber.get());
-			// TODO
-			manifest = null;
+			// 新建manifest日志
+			manifest = new LogWriterImpl(databaseDir, manifestFileNumber, true);
 			// 记录当前version信息
 			VersionEdit tmpEdit = new VersionEdit();
 			tmpEdit.setComparatorName(Options.INTERNAL_KEY_COMPARATOR_NAME);
 			tmpEdit.setCompactPointers(compactPointers);
-			tmpEdit.addFiles(current.getFiles());
+			tmpEdit.addFiles(currentVersion.getFiles());
 			// 序列化edit信息
 			ByteBuf record = tmpEdit.encode();
 			// 将edit信息写入日志
@@ -199,32 +227,35 @@ public class VersionSetImpl implements VersionSet{
 		manifest.addRecord(record, true);
 		// 将manifest文件信息记录到current文件中
 		if(newManifest) {
-			Current.INSTANCE.setCurrentFile(databaseDir, manifestFileNumber);
+			current.setManifest(manifestFileNumber);
 		}
 		// 把得到的version最终放入versionSet中
 		appendVersion(version);
 		logNumber = edit.getLogNumber();
 	}
+	private void initCurrent() {
+		//TODO
+	}
 
 	/**
-	 * 将version放进version列表中
+	 * 将version指定为current，存入version列表
 	 * @param version
 	 */
 	private void appendVersion(Version version) {
 		Preconditions.checkNotNull(version);
 		Preconditions.checkArgument(version.refs() == 0);
-		Preconditions.checkArgument(version != current);
+		Preconditions.checkArgument(version != currentVersion);
 		// 减少current引用计数，如果引用计数降为0则主动删除version
-		if(current != null) {
-			current.release();
-			if(current.refs() == 0) {
-				activeVersions.remove(current);
+		if(currentVersion != null) {
+			currentVersion.release();
+			if(currentVersion.refs() == 0) {
+				activeVersions.remove(currentVersion);
 			}
 		}
 		// 更新current并放入version列表
-		current = version;
-		current.retain();
-		activeVersions.put(current, new Object());
+		currentVersion = version;
+		currentVersion.retain();
+		activeVersions.put(currentVersion, new Object());
 	}
 	private void setLevelAndScore(Version version) {
 		// 最佳level和最佳score
@@ -239,7 +270,7 @@ public class VersionSetImpl implements VersionSet{
 			} else {
 				// level1以上的层次，依据文件大小
 				long levelBytes = version.levelBytes(level);
-				score = (double)levelBytes / maxBytesForLevel(level);
+				score = (double)levelBytes / VersionSet.maxBytesForLevel(level);
 			}
 			// 更新最佳score和level
 			if (score > bestScore) {
@@ -294,27 +325,13 @@ public class VersionSetImpl implements VersionSet{
 		Preconditions.checkNotNull(largest.getUserKey());
 		ImmutableList.Builder<FileMetaData> files = ImmutableList.builder();
 		// 遍历level0层文件，寻找和上述范围有重叠的文件
-		for (FileMetaData fileMetaData : current.getFiles(level)) {
+		for (FileMetaData fileMetaData : currentVersion.getFiles(level)) {
 			if(!(fileMetaData.getLargest().getUserKey().compareTo(smallest.getUserKey()) < 0
 					|| fileMetaData.getSmallest().getUserKey().compareTo(largest.getUserKey()) > 0)) {
 				files.add(fileMetaData);
 			}
 		}
 		return files.build();
-	}
-	/**
-	 * 计算每层最大数据量
-	 * @param level 层数
-	 * @return 最大数据量
-	 */
-	private double maxBytesForLevel(int level) {
-		// level0层文件大小为10MB
-		double base = 10.0 * (1 << 20);
-		while (level > 1) {
-			base *= 10;
-			level--;
-		}
-		return base;
 	}
 
 	@Override
@@ -329,10 +346,18 @@ public class VersionSetImpl implements VersionSet{
 
 	@Override
 	public Version getCurrent() {
-		return current;
+		return currentVersion;
 	}
+	
+	@Override
+	public TableCache getTableCache() {
+		return tableCache;
+	}
+	
 	@Override
 	public void setCompactPointers(Map<Integer, InternalKey> compactionPointers4Set) {
 		compactPointers.putAll(compactionPointers4Set);
 	}
+
+
 }

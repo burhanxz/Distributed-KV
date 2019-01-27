@@ -3,7 +3,10 @@ package lsm.internal;
 import java.util.Comparator;
 import java.util.TreeMap;
 
+import com.google.common.base.Preconditions;
+
 import lsm.TableCache;
+import lsm.VersionSet;
 import lsm.base.FileMetaData;
 import lsm.base.LookupKey;
 import lsm.base.LookupResult;
@@ -12,6 +15,7 @@ import lsm.base.Options;
 public class LevelImpl extends AbstractLevel{
 	public LevelImpl(int level, TableCache cache) {
 		super(level, cache);
+		Preconditions.checkArgument(level > 0 && level < VersionSet.MAX_LEVELS);
 		// 按照file的最大key进行升序排序
 		files = new TreeMap<>(new Comparator<FileMetaData>() {
 			@Override

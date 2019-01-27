@@ -21,9 +21,21 @@ import lsm.base.FileMetaData;
 import lsm.base.Options;
 
 public class VersionBuilderImpl implements VersionBuilder{
+	/**
+	 * version builder 所属version set
+	 */
 	private VersionSet versionSet;
+	/**
+	 * version builder 所使用的base, base + edit = a new version
+	 */
 	private Version base;
+	/**
+	 * 标记为需要删除的文件
+	 */
 	private Map<Integer, Set<Long>> deletedFiles;
+	/**
+	 * 标记为需要添加的文件
+	 */
 	private Map<Integer, SortedSet<FileMetaData>> newFiles;
 	public VersionBuilderImpl(VersionSet versionSet, Version base) {
 		this.versionSet = versionSet;
@@ -59,8 +71,8 @@ public class VersionBuilderImpl implements VersionBuilder{
 
 	@Override
 	public Version build() {
-		// TODO
-		Version version = null;
+		// 新建version
+		Version version = new VersionImpl(versionSet);
 		// 定义文件排序的比较器
 		Comparator<FileMetaData> comparator = new Comparator<FileMetaData>() {
 			@Override
@@ -86,7 +98,7 @@ public class VersionBuilderImpl implements VersionBuilder{
 				if(!(deletedFiles.containsKey(level) && deletedFiles.get(level).contains(fileMetaData))) {
 					List<FileMetaData> files = version.getFiles(level);
 					if(level > 0 && !files.isEmpty()) {
-						// TODO 查看本层所有文件是否与选中文件有重叠
+						// 查看本层所有文件是否与选中文件有重叠
 						boolean overlap = Options.INTERNAL_KEY_COMPARATOR.compare(files.get(files.size() - 1).getLargest(), fileMetaData.getSmallest()) >= 0;
 						Preconditions.checkState(!overlap);
 					}
