@@ -14,12 +14,16 @@ public class MmapReleaseUtil {
 	private static Method cleanerMethod;
 	static {
 		try {
+			// 获取java.nio.DirectByteBuffer class对象
+			Class<?> directByteBufferClazz = Class.forName("java.nio.DirectByteBuffer");
 			// 获取方法和使用权限
-			cleanerMethod = MappedByteBuffer.class.getMethod("cleaner", new Class[0]);
+			cleanerMethod = directByteBufferClazz.getMethod("cleaner");
 			cleanerMethod.setAccessible(true);
 		} catch (NoSuchMethodException e) {
 			e.printStackTrace();
 		} catch (SecurityException e) {
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
 		}
 	}
