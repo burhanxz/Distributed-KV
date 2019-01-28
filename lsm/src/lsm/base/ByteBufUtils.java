@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
+import com.google.common.base.Preconditions;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
@@ -43,6 +45,34 @@ public class ByteBufUtils {
 		tmpBuffer.flip();
 		// bytebuffer写入byteBuf
 		buffer.writeBytes(tmpBuffer);
+	}
+	public static void putVarByte(ByteBuf dst, byte data) {
+		Preconditions.checkArgument(dst.writableBytes() >= Byte.BYTES);
+		dst.writeByte(data);
+	}
+	public static void putVarInt(ByteBuf dst, int data) {
+		Preconditions.checkArgument(dst.writableBytes() >= Integer.BYTES);
+		dst.writeInt(data);
+	}
+	public static void putVarLong(ByteBuf dst, long data) {
+		Preconditions.checkArgument(dst.writableBytes() >= Long.BYTES);
+		dst.writeLong(data);
+	}
+	public static void putVarWithLenPrefix(ByteBuf dst, ByteBuf data) {
+		Preconditions.checkArgument(dst.writableBytes() >= (data.readableBytes() + Integer.BYTES));
+		dst.writeInt(data.readableBytes());
+		dst.writeBytes(data.slice());
+	}
+	public static void putVarWithLenPrefix(ByteBuf dst, byte[] data) {
+		Preconditions.checkArgument(dst.writableBytes() >= (data.length + Integer.BYTES));
+		dst.writeInt(data.length);
+		dst.writeBytes(data);
+	}
+	public static ByteBuf getVarWithLenPrefix(ByteBuf src) {
+		Preconditions.checkArgument(src.isReadable());
+		int len = src.readInt();
+		ByteBuf ret = src.readSlice(len);
+		return ret;
 	}
 	/**
 	 * 批量记录索引位置

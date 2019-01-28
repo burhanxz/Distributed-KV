@@ -178,4 +178,11 @@ public class InternalKey{
 			}
 		}
 	}
+
+	@Override
+	public String toString() {
+		// 方便测试用
+		return new StringBuilder().append(ByteBufUtils.buf2Str(userKey)).append(" : ")
+				.append(seq).append(" : ").append(type.getState()).toString();
+	}
 }

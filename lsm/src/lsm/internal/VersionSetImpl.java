@@ -233,6 +233,10 @@ public class VersionSetImpl implements VersionSet{
 		appendVersion(version);
 		logNumber = edit.getLogNumber();
 	}
+	
+	/**
+	 * 初始化current文件
+	 */
 	private void initCurrent() {
 		//TODO
 	}

@@ -1,9 +1,8 @@
 package lsm.base;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
+import lsm.LogWriter;
 
 /**
  * fileMetaData序列化格式
@@ -18,31 +17,34 @@ public class FileMetaData {
     private final long number;
 
     /**
-     * File size in bytes
+     * 文件大小，单位：B
      */
     private final long fileSize;
 
     /**
-     * Smallest internal key served by table
+     * 文件最小键
      */
     private final InternalKey smallest;
 
     /**
-     * Largest internal key served by table
+     * 文件最大键
      */
     private final InternalKey largest;
-
-    /**
-     * Seeks allowed until compaction
-     * 允许的最大查找次数
-     */
-    private final AtomicInteger allowedSeeks = new AtomicInteger(1 << 30);
-
+    
 	public FileMetaData(long number, long fileSize, InternalKey smallest, InternalKey largest) {
 		this.number = number;
 		this.fileSize = fileSize;
 		this.smallest = smallest;
 		this.largest = largest;
+	}
+	// 反序列化得到file meta data
+	public FileMetaData(ByteBuf bytes) {
+		number = bytes.readLong();
+		fileSize = bytes.readLong();
+		ByteBuf smallestKeyBuf = ByteBufUtils.getVarWithLenPrefix(bytes);
+		ByteBuf largestKeyBuf = ByteBufUtils.getVarWithLenPrefix(bytes);
+		smallest = InternalKey.decode(smallestKeyBuf);
+		largest = InternalKey.decode(largestKeyBuf);
 	}
 	
 	/**
@@ -50,16 +52,14 @@ public class FileMetaData {
 	 * @return
 	 */
 	public ByteBuf encode() {
-		ByteBuf smallestKeyBuffer = smallest.encode();
-		ByteBuf largestKeyBuffer = largest.encode();
-		ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer(Long.BYTES * 2 + Integer.BYTES * 2 + smallestKeyBuffer.readableBytes() + largestKeyBuffer.readableBytes());
-		buffer.writeLong(number);
-		buffer.writeLong(fileSize);
-		buffer.writeInt(smallestKeyBuffer.readableBytes());
-		buffer.writeBytes(smallestKeyBuffer);
-		buffer.writeInt(largestKeyBuffer.readableBytes());
-		buffer.writeBytes(largestKeyBuffer);
-		return null;
+		ByteBuf smallestKeyBuf = smallest.encode();
+		ByteBuf largestKeyBuf = largest.encode();
+		ByteBuf dst = PooledByteBufAllocator.DEFAULT.buffer(LogWriter.LOG_BLOCK_SIZE);
+		ByteBufUtils.putVarLong(dst, number);
+		ByteBufUtils.putVarLong(dst, fileSize);
+		ByteBufUtils.putVarWithLenPrefix(dst, smallestKeyBuf);
+		ByteBufUtils.putVarWithLenPrefix(dst, largestKeyBuf);
+		return dst;
 	}
 
 	public long getNumber() {
@@ -76,6 +76,13 @@ public class FileMetaData {
 
 	public InternalKey getLargest() {
 		return largest;
+	}
+
+	@Override
+	public String toString() {
+		// 方便测试用
+		return new StringBuilder().append(number).append(" : ").append(fileSize)
+				.append(" : ").append(smallest.toString()).append(" : ").append(largest.toString()).toString();
 	}
 
 }

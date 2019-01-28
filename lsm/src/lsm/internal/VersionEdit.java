@@ -15,6 +15,8 @@ import com.google.common.collect.Multimap;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
+import lsm.LogWriter;
+import lsm.base.ByteBufUtils;
 import lsm.base.FileMetaData;
 import lsm.base.InternalKey;
 
@@ -35,6 +37,13 @@ import lsm.base.InternalKey;
  *
  */
 public class VersionEdit{
+	private static final byte K_COMPARATOR = 1;
+	private static final byte K_LOG_NUMBER = 2;
+	private static final byte K_NEXT_FILE_NUMBER = 3;
+	private static final byte K_LAST_SEQ = 4;
+	private static final byte K_COMPACT_POINT = 5;
+	private static final byte K_DELETE_FILE_NO = 6;
+	private static final byte K_NEW_FILE_NO = 7;
 	/**
 	 * key comparator名字  
 	 */
@@ -52,53 +61,141 @@ public class VersionEdit{
 	 */
 	private Long lastSequenceNumber;
 	
-	private final Map<Integer, InternalKey> compactPointers = new TreeMap<>();
-	private final Map<Integer, List<Long>> deletedFiles = new HashMap<>();
-	private final Map<Integer, List<FileMetaData>> newFiles = new HashMap<>();
+	private Map<Integer, InternalKey> compactPointers;
+	private Map<Integer, List<Long>> deletedFiles;
+	private Map<Integer, List<FileMetaData>> newFiles;
+	public VersionEdit() {
+		comparatorName = null;
+		logNumber = -1L;
+		nextFileNumber = -1L;
+		lastSequenceNumber = -1L;
+		compactPointers = new TreeMap<>();
+		deletedFiles = new HashMap<>();
+		newFiles = new HashMap<>();
+	}
 	/**
 	 * 将versionEdit编码为字节，方便序列化.序列化结构参考VersionEdit doc
 	 * @return 字节数据
 	 */
 	public ByteBuf encode() {
-		Preconditions.checkNotNull(comparatorName);
-		Preconditions.checkArgument(logNumber >= 0);
-		Preconditions.checkArgument(nextFileNumber >= 0);
-		Preconditions.checkArgument(lastSequenceNumber >= 0);
-		ByteBuf buff = PooledByteBufAllocator.DEFAULT.buffer();
-		// 序列化comparator name
-		byte[] comparator = comparatorName.getBytes(StandardCharsets.UTF_8);
-		buff.writeInt(comparator.length);
-		buff.writeBytes(comparator);
+		// 分配bytebuf，容量为一个日志block
+		ByteBuf dst = PooledByteBufAllocator.DEFAULT.buffer(LogWriter.LOG_BLOCK_SIZE);
+		// 序列化比较器
+		if(comparatorName != null) {
+			ByteBufUtils.putVarByte(dst, K_COMPARATOR);
+			ByteBufUtils.putVarWithLenPrefix(dst, comparatorName.getBytes());
+		}
 		// 序列化log number
-		buff.writeLong(logNumber);
+		if(logNumber >= 0) {
+			ByteBufUtils.putVarByte(dst, K_LOG_NUMBER);
+			ByteBufUtils.putVarLong(dst, logNumber);
+		}
 		// 序列化next file number
-		buff.writeLong(nextFileNumber);
+		if(nextFileNumber >= 0) {
+			ByteBufUtils.putVarByte(dst, K_NEXT_FILE_NUMBER);
+			ByteBufUtils.putVarLong(dst, nextFileNumber);
+		}
 		// 序列化last seq
-		buff.writeLong(lastSequenceNumber);
-		// 序列化compact pointers
-		compactPointers.forEach((level, key) -> {
-			buff.writeInt(level);
-			ByteBuf keyBuffer = key.encode();
-			buff.writeInt(keyBuffer.readableBytes());
-			buff.writeBytes(keyBuffer);
-		});
-		// 序列化delete files
-		deletedFiles.forEach((level, fileNumbers) -> {
-			buff.writeInt(level);
-			buff.writeInt(fileNumbers.size());
-			fileNumbers.forEach(fileNumber -> {
-				buff.writeLong(fileNumber);
+		if(lastSequenceNumber >= 0) {
+			ByteBufUtils.putVarByte(dst, K_LAST_SEQ);
+			ByteBufUtils.putVarLong(dst, lastSequenceNumber);
+		}
+		// 序列化compact pointer
+		if(compactPointers != null) {
+			compactPointers.forEach((level, internalKey) -> {
+				ByteBufUtils.putVarByte(dst, K_COMPACT_POINT);
+				ByteBufUtils.putVarInt(dst, level);
+				ByteBufUtils.putVarWithLenPrefix(dst, internalKey.encode());
 			});
-		});
-		// 序列化new files
-		newFiles.forEach((level, fileMetaData) -> {
-			buff.writeInt(level);
-			//TODO
-//			ByteBuf fileMetaDataBuffer = fileMetaData.encode();
-//			buff.writeInt(fileMetaDataBuffer.readableBytes());
-//			buff.writeBytes(fileMetaDataBuffer);
-		});
-		return buff;
+		}
+		// 序列化delete file
+		if(deletedFiles != null) {
+			deletedFiles.forEach((level, list) -> {
+				list.forEach(fileNumber -> {
+					ByteBufUtils.putVarByte(dst, K_DELETE_FILE_NO);
+					ByteBufUtils.putVarInt(dst, level);
+					ByteBufUtils.putVarLong(dst, fileNumber);
+				});
+			});
+		}
+		// 序列化new file
+		if(newFiles != null) {
+			newFiles.forEach((level, list) -> {
+				list.forEach(fileMetaData -> {
+					ByteBufUtils.putVarByte(dst, K_NEW_FILE_NO);
+					ByteBufUtils.putVarInt(dst, level);
+					ByteBufUtils.putVarWithLenPrefix(dst, fileMetaData.encode());
+				});
+			});
+		}
+		return dst;
+	}
+	public VersionEdit(ByteBuf record) {
+		this();
+		record = record.slice();
+		// 按顺序读取record
+		while(record.isReadable()) {
+			// 获取tag数值，并据此解析数据
+			byte tag = record.readByte();
+			switch(tag) {
+			// 解析comparator
+			case K_COMPARATOR : {
+				ByteBuf comparatorBytes = ByteBufUtils.getVarWithLenPrefix(record);
+				comparatorName = ByteBufUtils.buf2Str(comparatorBytes);
+				break;
+			}
+			// 解析log number
+			case K_LOG_NUMBER :{
+				logNumber = record.readLong();
+				break;
+			}
+			// 解析next file number
+			case K_NEXT_FILE_NUMBER:{
+				nextFileNumber = record.readLong();
+				break;
+			}
+			// 解析last seq
+			case K_LAST_SEQ :{
+				lastSequenceNumber = record.readLong();
+				break;
+			}
+			// 解析 compact point
+			case K_COMPACT_POINT :{
+				int level = record.readInt();
+				ByteBuf internalKeyBytes = ByteBufUtils.getVarWithLenPrefix(record);
+				InternalKey internalKey = InternalKey.decode(internalKeyBytes);
+				compactPointers.put(level, internalKey);
+				break;
+			}
+			// 解析delete file number
+			case K_DELETE_FILE_NO :{
+				int level = record.readInt();
+				long fileNumber = record.readLong();
+				// 如果file number列表不存在，则新建列表
+				List<Long> list = null;
+				if((list = deletedFiles.get(level)) == null) {
+					list = new ArrayList<>();
+					deletedFiles.put(level, list);
+				}
+				list.add(fileNumber);
+				break;
+			}
+			// 解析new file numbers
+			case K_NEW_FILE_NO :{
+				int level = record.readInt();
+				ByteBuf fileMetaDataBytes = ByteBufUtils.getVarWithLenPrefix(record);
+				FileMetaData fileMetaData = new FileMetaData(fileMetaDataBytes);
+				// 如果new files 列表不存在则新建列表
+				List<FileMetaData> list = null;
+				if((list = newFiles.get(level)) == null) {
+					list = new ArrayList<>();
+					newFiles.put(level, list);
+				}
+				list.add(fileMetaData);
+				break;
+			}
+			}
+		}
 	}
 	/**
 	 * 设置被删除的文件信息
