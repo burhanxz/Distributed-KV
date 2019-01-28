@@ -5,5 +5,5 @@
     <artifactId>distributed-kv-master</artifactId>
     <version>0.0.1-SNAPSHOT</version>
   </parent>
-  <artifactId>file-system</artifactId>
+  <artifactId>fs</artifactId>
 </project>

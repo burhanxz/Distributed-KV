@@ -134,6 +134,6 @@
 	<modules>
 		<module>rpc</module>
 		<module>lsm</module>
-		<module>file-system</module>
+		<module>fs</module>
 	</modules>
 </project>
