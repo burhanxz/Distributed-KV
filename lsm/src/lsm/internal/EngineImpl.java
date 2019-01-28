@@ -410,7 +410,7 @@ public class EngineImpl {
 		 */
 		boolean isFull() throws IOException {
 			// 比较当前sstable文件大小和限制大小
-			return builder.getFileSize() >= compaction.getMaxOutputFileSize();
+			return builder.getFileSize() >= Compaction.MAX_FILE_SIZE;
 		}
 		/**
 		 * 新建sstable
@@ -480,7 +480,7 @@ public class EngineImpl {
 		void installSSTable() throws IOException {
 			VersionEdit edit = compaction.getEdit();
 			// 将刚刚参与归并的sstable文件作为待删除文件，加入到compaction中
-			compaction.addInputDeletions(compaction.getEdit());
+			compaction.deleteFiles(compaction.getEdit());
 			int level = compaction.getLevel();
 			// 新建的文件应当加到更上一层中
 			for(FileMetaData newFile : fileMetaDatas) {

@@ -134,9 +134,7 @@ public class VersionSetImpl implements VersionSet{
 
 	@Override
 	public Compaction pickCompaction() {
-		if(!needsCompaction()) {
-			return null;
-		}
+		Preconditions.checkState(needsCompaction());
 		// 获取levelInputs,level和levelUpInputs
 		int level;
 		List<FileMetaData> levelInputs = new ArrayList<>();
@@ -144,7 +142,7 @@ public class VersionSetImpl implements VersionSet{
 		// 通过version获取compaction level
 		level = currentVersion.getCompactionLevel();
 		Preconditions.checkState(level >= 0);
-		Preconditions.checkState(level + 1 < LEVELS);
+		Preconditions.checkState(level + 1 < VersionSet.MAX_LEVELS);
 		// 遍历level层所有的文件，寻找第一个可compact的文件
 		Preconditions.checkState(!currentVersion.getFiles(level).isEmpty());
 		for (FileMetaData fileMetaData : currentVersion.getFiles(level)) {
@@ -169,11 +167,10 @@ public class VersionSetImpl implements VersionSet{
 		}
 		// 遍历level+1层文件，寻找所有和指定范围有重叠的文件
 		Preconditions.checkState(!levelInputs.isEmpty());
-		Preconditions.checkState(!currentVersion.getFiles(level + 1).isEmpty());
 		// 重新获取level层大小范围
 		Entry<InternalKey, InternalKey> range = getRange(levelInputs);
 		// 按照level层所有文件大小范围，从level+1层获取重叠文件
-		levelUpInputs = getOverlappingInputs(level, range.getKey(), range.getValue());
+		levelUpInputs = getOverlappingInputs(level + 1, range.getKey(), range.getValue());
 		// 尝试在不改变levelUpInputs即level + 1层文件大小的情况下，增加level层选中文件数目
 		// 再次扩大小大范围，将level层和level+1层所有文件的大小范围计算进去
 		range = getRange(levelInputs, levelUpInputs);
@@ -413,7 +410,7 @@ public class VersionSetImpl implements VersionSet{
 
 	@Override
 	public String toString() {
-		return "VersionSetImpl [nextFileNumber=" + nextFileNumber + ", databaseDir=" + databaseDir
+		return "VersionSetImpl [nextFileNumber=" + nextFileNumber.get() + ", databaseDir=" + databaseDir
 				+ ", manifestFileNumber=" + manifestFileNumber + ", activeVersions=" + activeVersions
 				+ ", currentVersion=" + currentVersion + ", lastSequence=" + lastSequence + ", logNumber=" + logNumber
 				+ ", compactPointers=" + compactPointers + "]";

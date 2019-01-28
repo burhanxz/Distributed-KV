@@ -12,11 +12,11 @@ import lsm.base.Options;
 public class Level0Impl extends AbstractLevel{
 	public Level0Impl(TableCache cache) {
 		super(0, cache);
-		// 按照file的新旧程度进行排序，即按照fileNumber大小进行降序排序
+		// 按照file的新旧程度进行排序，即按照fileNumber大小进行升序排序
 		files = new TreeMap<>(new Comparator<FileMetaData>() {
 			@Override
 			public int compare(FileMetaData left, FileMetaData right) {
-				return -(int) (left.getNumber() - right.getNumber());
+				return (int) (left.getNumber() - right.getNumber());
 			}
 		});
 	}
