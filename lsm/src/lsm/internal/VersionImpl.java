@@ -48,6 +48,12 @@ public class VersionImpl implements Version{
 		this.versionSet = versionSet;
 		this.level0 = new Level0Impl(versionSet.getTableCache());
 		this.levels = new TreeMap<>();
+		for(int i = 1; i < VersionSet.MAX_LEVELS; i++) {
+			// 新建level
+			LevelImpl leveln = new LevelImpl(i, versionSet.getTableCache());
+			// 存入levels
+			levels.put(i, leveln);
+		}
 	}
 	@Override
 	public LookupResult get(LookupKey key) throws Exception {
@@ -101,13 +107,9 @@ public class VersionImpl implements Version{
 		ref.decrementAndGet();
 	}
 	@Override
-	public int maxLevel() {
-		return levels.size();
-	}
-	@Override
 	public int files(int level) {
 		Preconditions.checkArgument(level - 1 < levels.size());
-		return level == 0 ? level0.getFiles().size() : levels.get(level - 1).getFiles().size();
+		return level == 0 ? level0.getFiles().size() : levels.get(level).getFiles().size();
 	}
 	@Override
 	public double getCompactionScore() {
@@ -127,12 +129,12 @@ public class VersionImpl implements Version{
 	}
 	@Override
 	public List<FileMetaData> getFiles(int level) {
-		Preconditions.checkArgument(level <= maxLevel() && level >= 0);
+		Preconditions.checkArgument(level < VersionSet.MAX_LEVELS && level >= 0);
 		if(level == 0) {
 			return level0.getFiles();
 		}
 		else {
-			return levels.get(level - 1).getFiles();
+			return levels.get(level).getFiles();
 		}
 	}
 	@Override
@@ -142,16 +144,21 @@ public class VersionImpl implements Version{
 			level0.addFile(fileMetaData);
 		}
 		else {
-			// 如果没有对应的level，则先创建
-			LevelImpl leveln = null;
-			if((leveln = levels.get(level - 1)) == null){
-				leveln = new LevelImpl(level - 1, versionSet.getTableCache());
-				// 存入levels
-				levels.put(level - 1, leveln);
-			}
+			LevelImpl leveln = levels.get(level);
 			leveln.addFile(fileMetaData);
 		}
 		
+	}
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		String ret = "\n*****************Version: " + "\nlevel0=" + level0;
+		sb.append(ret);
+		levels.forEach((level, levelImpl) -> {
+			sb.append("\n" + level + " : " + levelImpl.toString());
+		});
+		sb.append(", \ncompactionLevel=" + compactionLevel + ", \ncompactionScore=" + compactionScore + "\n*****************");
+		return sb.toString();
 	}
 
 }

@@ -182,7 +182,7 @@ public class InternalKey{
 	@Override
 	public String toString() {
 		// 方便测试用
-		return new StringBuilder().append(ByteBufUtils.buf2Str(userKey)).append(" : ")
-				.append(seq).append(" : ").append(type.getState()).toString();
+		return new StringBuilder().append("internalKey: [ userKey=").append(ByteBufUtils.buf2Str(userKey)).append(", seq=")
+				.append(seq).append(", type=").append(type.getState()).append("]").toString();
 	}
 }

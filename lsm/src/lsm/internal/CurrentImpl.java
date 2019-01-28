@@ -30,7 +30,7 @@ public class CurrentImpl implements Current {
 	}
 	@Override
 	public void setManifest(long menifestFileNumber) throws IOException {
-		Preconditions.checkArgument(menifestFileNumber > 1);
+		Preconditions.checkArgument(menifestFileNumber >= 1);
 		// 如果current文件不存在，新建一个
 		if(!currentFile.exists()) {
 			currentFile.createNewFile();
@@ -39,7 +39,6 @@ public class CurrentImpl implements Current {
     	String manifest = FileUtils.manifestFileName(menifestFileNumber);
         // 将manifest文件信息写入current文件
         ByteBuffer buffer = ByteBuffer.wrap((manifest + "\n").getBytes(StandardCharsets.UTF_8));
-        buffer.flip();
         try(RandomAccessFile raf = new RandomAccessFile(currentFile, "rw");
         		FileChannel channel = raf.getChannel()){
         	channel.write(buffer);

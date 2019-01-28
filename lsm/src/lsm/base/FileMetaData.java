@@ -81,8 +81,8 @@ public class FileMetaData {
 	@Override
 	public String toString() {
 		// 方便测试用
-		return new StringBuilder().append(number).append(" : ").append(fileSize)
-				.append(" : ").append(smallest.toString()).append(" : ").append(largest.toString()).toString();
+		return new StringBuilder("[fileMetaData***: ").append("number=").append(number).append(", size=").append(fileSize)
+				.append(", small=").append(smallest.toString()).append(", large=").append(largest.toString()).append(" ***fileMetaData]").toString();
 	}
 
 }

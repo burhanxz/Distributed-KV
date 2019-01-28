@@ -1,6 +1,7 @@
 package lsm.internal;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -28,6 +29,12 @@ public class LogReaderImpl implements LogReader{
 		Preconditions.checkArgument(fileNumber > 2);
 		// 新建manifest或普通log文件
 		File file = FileUtils.newLogFile(databaseDir, fileNumber, isManifest);
+		// 绑定file channel
+		channel = new RandomAccessFile(file, "r").getChannel();
+		buff = ByteBuffer.allocate(LogWriter.LOG_BLOCK_SIZE);
+	}
+	public LogReaderImpl(File file) throws IOException {
+		Preconditions.checkState(file.exists());
 		// 绑定file channel
 		channel = new RandomAccessFile(file, "r").getChannel();
 		buff = ByteBuffer.allocate(LogWriter.LOG_BLOCK_SIZE);

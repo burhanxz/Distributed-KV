@@ -63,7 +63,7 @@ public interface Version {
 	public default Map<Integer, List<FileMetaData>> getFiles(){
 		ImmutableMap.Builder<Integer, List<FileMetaData>> mapBuilder = ImmutableMap.builder();
 		// 遍历所有层次
-		for(int i = 0; i <= maxLevel(); i++) {
+		for(int i = 0; i < VersionSet.MAX_LEVELS; i++) {
 			mapBuilder.put(i, getFiles(i));
 		}
 		return mapBuilder.build();
@@ -80,11 +80,6 @@ public interface Version {
 		}
 		return levelBytes;
 	}
-	/**
-	 * 最大level编号
-	 * @return
-	 */
-	public int maxLevel();
 	/**
 	 * 某层中的文件总数
 	 * @param level 层编号

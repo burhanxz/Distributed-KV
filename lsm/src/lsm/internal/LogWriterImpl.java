@@ -49,7 +49,7 @@ public class LogWriterImpl implements LogWriter {
 	private long lastPos;
 	@SuppressWarnings("resource")
 	public LogWriterImpl(File databaseDir, long fileNumber, boolean isManifest) throws IOException {
-		Preconditions.checkArgument(fileNumber > 2);
+		Preconditions.checkArgument(fileNumber >= 1);
 		this.fileNumber = fileNumber;
 		// 新建manifest或普通log文件
 		File file = FileUtils.newLogFile(databaseDir, fileNumber, isManifest);

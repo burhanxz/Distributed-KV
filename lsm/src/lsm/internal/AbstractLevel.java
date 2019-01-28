@@ -45,6 +45,11 @@ public abstract class AbstractLevel implements Level{
 	public int getLevelNumber() {
 		return level;
 	}
+
+	@Override
+	public String toString() {
+		return "AbstractLevel \nlevel=" + level + ", \nfiles=" + files + "]";
+	}
 	
 
 }

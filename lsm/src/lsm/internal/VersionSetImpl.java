@@ -1,5 +1,7 @@
 package lsm.internal;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -17,6 +19,7 @@ import com.google.common.collect.Maps;
 
 import io.netty.buffer.ByteBuf;
 import lsm.Current;
+import lsm.LogReader;
 import lsm.LogWriter;
 import lsm.TableCache;
 import lsm.Version;
@@ -24,6 +27,7 @@ import lsm.VersionBuilder;
 import lsm.VersionSet;
 import lsm.base.Compaction;
 import lsm.base.FileMetaData;
+import lsm.base.FileUtils;
 import lsm.base.InternalKey;
 import lsm.base.Options;
 
@@ -51,7 +55,6 @@ public class VersionSetImpl implements VersionSet{
 	 */
 	private LogWriter manifest;
 	/**
-	 * TODO 需要初始化
 	 * manifest文件编号
 	 */
 	private long manifestFileNumber = INIT_MANIFEST_FILENUM;
@@ -64,7 +67,6 @@ public class VersionSetImpl implements VersionSet{
 	 */
 	private final Map<Version, Object> activeVersions = new WeakHashMap<>();
 	/**
-	 * TODO 需要初始化
 	 * 当前version
 	 */
 	private Version currentVersion;
@@ -73,7 +75,7 @@ public class VersionSetImpl implements VersionSet{
 	private long logNumber;
 	private final Map<Integer, InternalKey> compactPointers = new TreeMap<>();
 	
-	public VersionSetImpl(File databaseDir, int cacheSize) {
+	public VersionSetImpl(File databaseDir, int cacheSize) throws IOException {
 		Preconditions.checkNotNull(databaseDir);
 		Preconditions.checkArgument(databaseDir.exists() && databaseDir.isDirectory());
 		Preconditions.checkArgument(cacheSize > 0);
@@ -91,15 +93,37 @@ public class VersionSetImpl implements VersionSet{
 	}
 	
 	@Override
-	public void recover() {
-		// 获取current文件
-		
+	public void recover() throws IOException {
+		Preconditions.checkNotNull(current);
+		Preconditions.checkState(current.exists());
 		// 读取current文件中的manifest文件信息
+		String manifestName = current.getManifest();
+		
+		File manifestFile = new File(databaseDir, manifestName);
+		// 新建version builder
+		VersionBuilder builder = new VersionBuilderImpl(this, currentVersion);
 		// 逐一获取其中的versionEdit信息
-		// 将edit逐一应用到version builder中
+		try(LogReader logReader = new LogReaderImpl(manifestFile)){
+			for(ByteBuf record = logReader.readNextRecord(); record != null; record = logReader.readNextRecord()) {
+				VersionEdit edit = new VersionEdit(record);
+				// 将edit逐一应用到version builder中
+				builder.apply(edit);
+				// 更新log number, last seq和 next file number
+				logNumber = edit.getLogNumber() >= 0 ? edit.getLogNumber() : logNumber;
+				lastSequence = edit.getLastSequenceNumber() >= 0 ? edit.getLastSequenceNumber() : lastSequence;
+				if(edit.getNextFileNumber() >= nextFileNumber.get()) {
+					nextFileNumber.set(edit.getNextFileNumber());
+				}
+			}
+		}
 		// version builder获取version
-		// 更新log信息
-		// 更新文件编号信息
+		Version version = builder.build();
+		setLevelAndScore(version);
+		// 更新version列表
+		appendVersion(version);
+		// 分配一个manifest文件编号，并且更新next file number
+		manifestFileNumber = nextFileNumber.getAndIncrement();
+		
 	}
 	
 	@Override
@@ -184,21 +208,14 @@ public class VersionSetImpl implements VersionSet{
 		// edit信息设置到versionSet字段中
 		// 如果edit中已经包含一些信息,检查这些信息
 		if (edit.getLogNumber() != null) {
-			Preconditions.checkArgument(edit.getLogNumber() >= logNumber);
-			Preconditions.checkArgument(edit.getLogNumber() < nextFileNumber.get());
+			checkArgument(edit.getLogNumber() >= logNumber);
+			checkArgument(edit.getLogNumber() < nextFileNumber.get());
 		} else {
 			edit.setLogNumber(logNumber);
 		}
-		if(edit.getNextFileNumber() > 0) {
-			Preconditions.checkArgument(edit.getNextFileNumber() <= nextFileNumber.get());
-		} else {
-			edit.setNextFileNumber(nextFileNumber.get());
-		}
-		if(edit.getLastSequenceNumber() > 0) {
-			Preconditions.checkArgument(edit.getLastSequenceNumber() <= lastSequence);
-		} else {
-			edit.setLastSequenceNumber(lastSequence);
-		}
+		edit.setNextFileNumber(nextFileNumber.get());
+		edit.setLastSequenceNumber(lastSequence);
+		
 		// 利用versionBuilder和edit，经过多次中间形态,形成最终的version
 		VersionBuilder builder = new VersionBuilderImpl(this, currentVersion);
 		builder.apply(edit);
@@ -233,12 +250,43 @@ public class VersionSetImpl implements VersionSet{
 		appendVersion(version);
 		logNumber = edit.getLogNumber();
 	}
-	
+	/**
+	 * 将snapshot信息写入日志
+	 * snapshot即当前时间点的状态，包括comparator, compact pointers和new files三类信息
+	 * @param 日志
+	 * @throws IOException 
+	 */
+	private void writeSnapShot(LogWriter logWriter) throws IOException {
+		// 新建edit
+		VersionEdit edit = new VersionEdit();
+		// 依次添加comparator, compact pointers和new files三类信息
+		edit.setComparatorName(Options.INTERNAL_KEY_COMPARATOR_NAME);
+		edit.setCompactPointers(compactPointers);
+		edit.addFiles(currentVersion.getFiles());
+		// 序列化edit并写入日志
+		logWriter.addRecord(edit.encode(), false);
+	}
 	/**
 	 * 初始化current文件
+	 * @throws IOException 
 	 */
-	private void initCurrent() {
-		//TODO
+	private void initCurrent() throws IOException {
+		// 新建log writer用于manifest日志
+		try(LogWriter log = new LogWriterImpl(databaseDir, manifestFileNumber, true)){
+			// 写入快照信息到manifest.由于current丢失，manifest作废，需要写入快照信息来作为manifest初始信息
+			writeSnapShot(log);
+			// 新建edit
+			VersionEdit edit = new VersionEdit();
+			// 记录comparator, log number, next file number, last seq四类基本信息 
+			edit.setComparatorName(Options.INTERNAL_KEY_COMPARATOR_NAME);
+			edit.setLogNumber(logNumber);
+			edit.setNextFileNumber(nextFileNumber.get());
+			edit.setLastSequenceNumber(lastSequence);
+			// 写入新的edit信息到manifest
+			log.addRecord(edit.encode(), false);
+			// 设置manifest信息到current
+			current.setManifest(manifestFileNumber);
+		}
 	}
 
 	/**
@@ -266,7 +314,7 @@ public class VersionSetImpl implements VersionSet{
 		int bestLevel = -1;
 		double bestScore = -1.0;
 		// 遍历所有层次，找出最大的score值并记录
-		for (int level = 0; level <= version.maxLevel(); level++) {
+		for (int level = 0; level < VersionSet.MAX_LEVELS; level++) {
 			double score = 0;
 			if (level == 0) {
 				// level0 依据文件数目
@@ -361,6 +409,14 @@ public class VersionSetImpl implements VersionSet{
 	@Override
 	public void setCompactPointers(Map<Integer, InternalKey> compactionPointers4Set) {
 		compactPointers.putAll(compactionPointers4Set);
+	}
+
+	@Override
+	public String toString() {
+		return "VersionSetImpl [nextFileNumber=" + nextFileNumber + ", databaseDir=" + databaseDir
+				+ ", manifestFileNumber=" + manifestFileNumber + ", activeVersions=" + activeVersions
+				+ ", currentVersion=" + currentVersion + ", lastSequence=" + lastSequence + ", logNumber=" + logNumber
+				+ ", compactPointers=" + compactPointers + "]";
 	}
 
 

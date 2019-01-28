@@ -19,8 +19,9 @@ public interface VersionSet {
 	public boolean needsCompaction();
 	/**
 	 * 恢复数据库信息
+	 * @throws IOException 
 	 */
-	public void recover();
+	public void recover() throws IOException;
 	/**
 	 * 获取compaction信息
 	 * @return
