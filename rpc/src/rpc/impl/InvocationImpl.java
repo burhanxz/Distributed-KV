@@ -1,5 +1,6 @@
 package rpc.impl;
 
+import java.util.Arrays;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
@@ -72,6 +73,12 @@ public class InvocationImpl implements Invocation{
 	@Override
 	public Map<String, String> getOptions() {
 		return options;
+	}
+
+	@Override
+	public String toString() {
+		return "InvocationImpl [methodName=" + methodName + ", parameterTypes=" + Arrays.toString(parameterTypes)
+				+ ", args=" + Arrays.toString(args) + ", options=" + options + "]";
 	}
 
 }

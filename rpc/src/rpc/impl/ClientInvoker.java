@@ -24,6 +24,9 @@ public class ClientInvoker<T> implements Invoker<T>{
 	 * 接口类型
 	 */
 	private Class<T> type;
+	/**
+	 * 客户端连接的远程url
+	 */
 	private URL remoteUrl;
 	/**
 	 * 客户端传输

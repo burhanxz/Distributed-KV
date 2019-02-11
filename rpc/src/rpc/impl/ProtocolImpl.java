@@ -6,9 +6,11 @@ import rpc.Exporter;
 import rpc.Invoker;
 import rpc.Protocol;
 import rpc.URL;
+import test.client.TestExchanger;
 
 public class ProtocolImpl implements Protocol{
-	private Exchanger exchanger;
+	// TODO 测试用
+	private Exchanger exchanger = new TestExchanger();
 	@Override
 	public <T> Exporter<T> export(Invoker<T> invoker) {
 		// TODO Auto-generated method stub
