@@ -11,13 +11,15 @@ public interface Registry extends Node{
 	/**
 	 * 注册信息到注册中心
 	 * @param url
+	 * @throws Exception 
 	 */
-	public void register(URL url);
+	public void register(URL url) throws Exception;
 	/**
 	 * 取消注册
 	 * @param url
+	 * @throws Exception 
 	 */
-	public void unregister(URL url);
+	public void unregister(URL url) throws Exception;
 	/**
 	 * 订阅服务，等待注册中心push数据
 	 * @param url
