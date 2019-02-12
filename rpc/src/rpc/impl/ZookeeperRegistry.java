@@ -22,6 +22,7 @@ import rpc.NotifyListener;
 import rpc.Registry;
 import rpc.URL;
 import rpc.model.ConsumerConstants;
+import rpc.model.ProviderConstants;
 
 /**
  * ZK节点格式：
@@ -66,6 +67,7 @@ public class ZookeeperRegistry implements Registry{
 	public ZookeeperRegistry(URL registryUrl) throws IOException {
 		Preconditions.checkNotNull(registryUrl);
 		this.registryUrl = registryUrl;
+		// 初始化zk注册中心
 		init();
 	}
 	/**
@@ -174,15 +176,23 @@ public class ZookeeperRegistry implements Registry{
 	}
 
 	@Override
-	public void register(URL url) {
-		// TODO Auto-generated method stub
-		
+	public void register(URL url) throws Exception {
+		Preconditions.checkNotNull(url);
+		Preconditions.checkNotNull(url.getPath());
+		// 获取url对应的zk路径
+		String providerPath = getProviderPath(url);
+		// 在zk服务器上建立相应路径
+		zk.create(providerPath, "".getBytes(), null, CreateMode.EPHEMERAL);
 	}
 
 	@Override
-	public void unregister(URL url) {
-		// TODO Auto-generated method stub
-		
+	public void unregister(URL url) throws Exception {
+		Preconditions.checkNotNull(url);
+		Preconditions.checkNotNull(url.getPath());
+		// 获取url对应的zk路径
+		String providerPath = getProviderPath(url);
+		// 在zk服务器上删除相应路径
+		zk.delete(providerPath, -1);
 	}
 
 	/**
@@ -247,8 +257,8 @@ public class ZookeeperRegistry implements Registry{
 		Preconditions.checkNotNull(listener);
 		// 生成consumer路径
 		String consumerPath = getConsumerPath(url);
-		// 删除zk上的路径
-		zk.delete(consumerPath, 0);
+		// TODO 版本问题 删除zk上的路径
+		zk.delete(consumerPath, -1);
 		// 传入空列表，回调监听器
 		listener.notify(ImmutableList.of());
 	}
@@ -281,12 +291,23 @@ public class ZookeeperRegistry implements Registry{
 	}
 	
 	/**
-	 * 形如: /appKey/service/providers/
+	 * 形如: /appKey/service/providers/IP
 	 * @param url
 	 * @return
 	 */
 	private String getProviderPath(URL url) {
-		return url.getPath();
+		Preconditions.checkNotNull(url);
+		// 获取path
+		String path = url.getPath();
+		// path必须存在且以providers结尾
+		Preconditions.checkNotNull(path);
+		Preconditions.checkArgument(path.endsWith(ProviderConstants.PROVIDERS));;
+		// 正确格式 /appKey/service/providers/ 至少有三个分隔
+		StringBuilder builder = new StringBuilder(path);
+		// 组装/appKey/service/providers/IP格式
+		builder.append(URL.PATH_SPLIT)
+		       .append(url.connectString());
+		return builder.toString();
 	}
 	
 	/**
@@ -295,20 +316,16 @@ public class ZookeeperRegistry implements Registry{
 	 * @return
 	 */
 	private String getConsumerPath(URL url) {
+		Preconditions.checkNotNull(url);
 		// 获取path
-		String path = getProviderPath(url);
-		String[] pathStrs = path.split(URL.PATH_SPLIT);
-		Preconditions.checkNotNull(pathStrs);
-		// 正确格式 /appKey/service/providers/ 至少有三个分隔
-		Preconditions.checkArgument(pathStrs.length >= 3);
-		String appKey = pathStrs[0];
-		String service = pathStrs[1];
-		StringBuilder builder = new StringBuilder();
+		String path = url.getPath();
+		// path必须存在且以consumes结尾
+		Preconditions.checkNotNull(path);
+		Preconditions.checkArgument(path.endsWith(ConsumerConstants.CONSUMERS));;
+		// 正确格式 /appKey/service/consumers/ 至少有三个分隔
+		StringBuilder builder = new StringBuilder(path);
 		// 组装/appKey/service/consumers/IP格式
 		builder.append(URL.PATH_SPLIT)
-			   .append(appKey).append(URL.PATH_SPLIT)
-			   .append(service).append(URL.PATH_SPLIT)
-			   .append(ConsumerConstants.CONSUMERS).append(URL.PATH_SPLIT)
 		       .append(url.connectString());
 		return builder.toString();
 	}
