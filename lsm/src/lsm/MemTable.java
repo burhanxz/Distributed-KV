@@ -29,4 +29,5 @@ public interface MemTable extends Iterable<Entry<InternalKey, ByteBuf>>{
 	 * @return
 	 */
 	public LookupResult get(LookupKey key);
+	public void add(InternalKey internalKey, ByteBuf value);
 }

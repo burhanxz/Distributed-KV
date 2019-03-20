@@ -412,5 +412,11 @@ public class VersionSetImpl implements VersionSet{
 				+ ", compactPointers=" + compactPointers + "]";
 	}
 
+	@Override
+	public void setLastSequence(long seq) {
+		Preconditions.checkArgument(seq >= lastSequence);
+		lastSequence = seq;
+	}
+
 
 }

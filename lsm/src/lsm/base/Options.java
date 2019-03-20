@@ -22,4 +22,5 @@ public class Options {
 	 * level0 文件上限
 	 */
 	public static final int LEVEL0_LIMIT_COUNT = 12;
+	public static final int WRITE_BATCH_LIMIT_SIZE = 1 << 5; // 一次最多合并32个写任务
 }

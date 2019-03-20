@@ -45,6 +45,15 @@ public class MemTableImpl implements MemTable{
 		skipList.put(internalKey, value);
 	}
 	@Override
+	public void add(InternalKey internalKey, ByteBuf value) {
+		// 计算数据增量
+		int increment = internalKey.size() + value.readableBytes();
+		// 更新数据大小
+		size.getAndAdd(increment);
+		// 插入数据到跳表中
+		skipList.put(internalKey, value);
+	}
+	@Override
 	public long size() {
 		return size.get();
 	}

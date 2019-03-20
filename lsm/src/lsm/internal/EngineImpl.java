@@ -12,15 +12,21 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.PriorityQueue;
+import java.util.Queue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantLock;
 import com.google.common.base.Preconditions;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
+import lsm.Engine;
 import lsm.LogWriter;
 import lsm.MemTable;
 import lsm.SSTable;
@@ -36,7 +42,7 @@ import lsm.base.InternalKey;
 import lsm.base.Options;
 import lsm.base.SeekingIteratorComparator;
 
-public class EngineImpl {
+public class EngineImpl implements Engine{
 	/**
 	 * 引擎基本配置
 	 */
@@ -58,6 +64,10 @@ public class EngineImpl {
 	private LogWriter log;
 	private MemTable memTable;
 	private MemTable immutableMemTable;
+	/**
+	 * 写任务队列
+	 */
+	private Queue<WriteTask> queue;
 	/**
 	 * key的比较器
 	 */
@@ -82,7 +92,82 @@ public class EngineImpl {
 		this.tableCache = null;
 		this.internalKeyComparator = null;
 		this.compactionExecutor = null;
+		this.queue = new ConcurrentLinkedQueue<>();
 	}
+	
+	@Override
+	public void put(byte[] key, byte[] value) throws IOException {
+		// 将写任务积累到任务队列
+		WriteTask task = new WriteTask(Unpooled.wrappedBuffer(key), Unpooled.wrappedBuffer(value));
+		queue.offer(task);
+
+		// 线程检查自己是否 既不是队首，也没完成任务，是则阻塞
+		while(queue.peek() != task && !task.isDone()) {
+			// 线程将自己挂起
+			LockSupport.park();
+		}
+		// 线程检查自己是否 已经完成任务，如果完成，则退出
+		if(task.isDone())
+			return;
+		// 线程检查自己是否 未完成任务且是队首，是则进行合并操作
+		else if(!task.isDone() && queue.peek() == task) {
+			// 新建batch
+			List<WriteTask> writeBatch = new ArrayList<>();
+			// 在batch线程执行到此之前，进来的写线程都会挂起
+			// 合并队列中的任务到writeBatch
+			while(!queue.isEmpty() && writeBatch.size() < Options.WRITE_BATCH_LIMIT_SIZE) {
+				task = queue.poll();
+				writeBatch.add(task);
+			}
+			// 在batch线程执行到此之后，进来的写线程会出现新的队首
+			// 开始正式执行写入过程
+			compactionLock.lock();
+			try {
+				// 先确保空间足够
+				mkRoomForWrite();
+				// 获取序列号
+				long seq = versions.getLastSequence() + 1;
+				// 更新versionSet序列号
+				long lastSeq = seq + writeBatch.size() - 1;
+				versions.setLastSequence(lastSeq);
+				
+				//新建record数组
+				ByteBuf[] records = new ByteBuf[writeBatch.size()];
+				int index = 0;
+				// 日志合并写入
+				for(Iterator<WriteTask> iter = writeBatch.iterator(); iter.hasNext();) {
+					WriteTask t = iter.next();
+					long seqForRecord = seq;
+					InternalKey internalKey = t.getInternalKey(seqForRecord++);
+					// 合并record，相当于合并IO，减少磁盘IO次数
+					ByteBuf record = PooledByteBufAllocator.DEFAULT.buffer();
+					// 组织record信息，具体格式详见LogWriter接口注释
+					record.writeInt(internalKey.size());
+					record.writeBytes(internalKey.encode().slice());
+					record.writeInt(task.getValue().readableBytes());
+					record.writeBytes(task.getValue().slice());
+					records[index++] = record;
+				}
+				// 写入日志
+				log.addRecord(records, false);
+				// 写mem table
+				for(Iterator<WriteTask> iter = writeBatch.iterator(); iter.hasNext();) {
+					WriteTask t = iter.next();
+					long seqForMem = seq;
+					InternalKey internalKey = t.getInternalKey(seqForMem++);
+					memTable.add(internalKey, t.getValue());
+				}
+			} finally {
+				compactionLock.unlock();
+			}
+			// 唤醒阻塞在队列中的线程
+			for(Iterator<WriteTask> iter = writeBatch.iterator(); iter.hasNext();) {
+				task.setDone();
+				LockSupport.unpark(task.getThread());
+			}
+		}
+	}
+	
 	private void mkRoomForWrite() throws IOException {
 		// 确保写入线程持有锁
 		Preconditions.checkState(compactionLock.isHeldByCurrentThread());
@@ -538,6 +623,45 @@ public class EngineImpl {
 			versions.logAndApply(edit);
 			// 删除失效文件
 			handlePendingFiles();
+		}
+	}
+
+	/**
+	 * @author bird
+	 * 代表一个写任务，包装了处理成bytebuf的key-value
+	 */
+	private static class WriteTask{
+		private final ByteBuf key;
+		private final ByteBuf value;
+		private final Thread thread;
+		private InternalKey internalKey;
+		private boolean done;
+		public WriteTask(ByteBuf key, ByteBuf value) {
+			this.key = key;
+			this.value = value;
+			this.thread = Thread.currentThread();
+			this.done = false;
+		}
+		public ByteBuf getKey() {
+			return key;
+		}
+		public ByteBuf getValue() {
+			return value;
+		}
+		public InternalKey getInternalKey(long seq) {
+			if(internalKey == null) {
+				internalKey = new InternalKey(key, seq);
+			}
+			return internalKey;
+		}
+		public void setDone() {
+			this.done = true;
+		}
+		public boolean isDone() {
+			return done;
+		}
+		public Thread getThread() {
+			return thread;
 		}
 	}
 }

@@ -38,4 +38,11 @@ public interface LogWriter extends Closeable{
 	 * @throws IOException 
 	 */
 	public void addRecord(InternalKey internalKey, ByteBuf value, boolean force) throws IOException;
+	/**
+	 * 合并IO写入日志
+	 * @param records
+	 * @param force
+	 * @throws IOException
+	 */
+	void addRecord(ByteBuf[] records, boolean force) throws IOException;
 }

@@ -58,6 +58,10 @@ public interface VersionSet {
 	 * @return
 	 */
 	public long getLastSequence();
+	/**
+	 * 设置最新序列号
+	 */
+	public void setLastSequence(long seq);
 	
 	/**
 	 * 获取下一个文件编号

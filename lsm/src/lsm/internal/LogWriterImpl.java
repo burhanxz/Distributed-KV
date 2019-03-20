@@ -78,6 +78,44 @@ public class LogWriterImpl implements LogWriter {
 			mmap = channel.map(MapMode.READ_WRITE, lastPos, LOG_BLOCK_SIZE);
 		}
 	}
+	
+	@Override
+	public void addRecord(ByteBuf[] records, boolean force) throws IOException{
+		// TODO 待测试
+		byte[] cache = caches.get();
+		// 数组起始位置
+		int beginIndex = 0;
+		int need = 0;
+		for(int i = 0; i < records.length; i++) {
+			// 计算record占用空间
+			int recordSize = records[i].readableBytes();
+			// 计算所需空间
+			need += (recordSize + Integer.BYTES);
+			Preconditions.checkState(need < cache.length, "数据量超过限制");
+			// record大小信息写入缓冲区
+			cache[beginIndex] = (byte) ((recordSize >> 24) & 0xff);
+			cache[1 + beginIndex] = (byte) ((recordSize >> 16) & 0xff);
+			cache[2 + beginIndex] = (byte) ((recordSize >> 8) & 0xff);
+			cache[3 + beginIndex] = (byte) ((recordSize) & 0xff);
+			// record数据写入缓冲区
+			records[i].readBytes(cache, beginIndex + Integer.BYTES, recordSize);
+			// 释放record
+			records[i].release();
+			// 更新起始位置
+			beginIndex = need;
+		}
+		// 写入磁盘
+		synchronized(this) {
+			// 申请写入空间
+			applyFor(need);
+			// 将数据写入mmap
+			mmap.put(cache, 0, need);
+			// 如果需要则同步刷盘
+			if(force) {
+				mmap.force();
+			}
+		}
+	}
 	@Override
 	public void addRecord(ByteBuf record, boolean force) throws IOException{
 		// 计算record占用空间
