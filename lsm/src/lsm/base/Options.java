@@ -8,4 +8,18 @@ public class Options {
 	public static final Comparator<InternalKey> INTERNAL_KEY_COMPARATOR = new InternalKeyComparator();
 	public static final String INTERNAL_KEY_COMPARATOR_NAME = "default_comparator";
 	public static final String FILTER = "Bloom filter";
+	public static final int MEMTABLE_LIMIT = 1 << 26; // memtable 大小限制64MB
+	public static final int L0_SLOW_DOWN_COUNT = 8; // 开始延缓时，level0层的文件数量
+	/**
+	 * 最大层数
+	 */
+	public static final int LEVELS = 7;
+	/**
+	 * level0 score计算的基数
+	 */
+	public static final int LEVEL0_SCORE_BASE = 4;
+	/**
+	 * level0 文件上限
+	 */
+	public static final int LEVEL0_LIMIT_COUNT = 12;
 }

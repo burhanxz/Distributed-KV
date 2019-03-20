@@ -18,7 +18,7 @@ import rpc.ProxyFactory;
 import rpc.Registry;
 import rpc.URL;
 import rpc.model.ApplicationBean;
-
+import rpc.model.ConsumerConstants;
 import rpc.model.ProtocolBean;
 import rpc.model.ProviderConstants;
 import rpc.model.RegistryBean;
@@ -150,7 +150,7 @@ public class ConsumerConfig<T> implements FactoryBean<T>, InitializingBean, Disp
 		URL subscribeUrl = URL.builder().host(localUrl.getHost()).port(localUrl.getPort())
 				.appendPath(applicationBean.getAppKey())
 				.appendPath(interfaceClazz.getSimpleName())
-				.appendPath(ProviderConstants.PROVIDERS).build();
+				.appendPath(ConsumerConstants.CONSUMERS).build();
 		// 创建directory
 		NotifiedDirectroy<T> directory = new NotifiedDirectroy<>(interfaceClazz, localUrl);
 		// 将directory作为监听器，订阅注册中心消息

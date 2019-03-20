@@ -83,7 +83,53 @@ public class EngineImpl {
 		this.internalKeyComparator = null;
 		this.compactionExecutor = null;
 	}
-
+	private void mkRoomForWrite() throws IOException {
+		// 确保写入线程持有锁
+		Preconditions.checkState(compactionLock.isHeldByCurrentThread());
+		while(true) {
+			// 当level0 文件数量超过slow down 指标时，慢行// 当level0 文件数量超过slow down 指标时，慢行
+			if(versions.getCurrent().files(0) > Options.L0_SLOW_DOWN_COUNT) {
+				try {
+					// 延缓生产
+					// 释放锁，交由写线程和compaction线程竞争
+					compactionLock.unlock();
+					Thread.sleep(1);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				} finally {
+					// 重新竞争锁
+					compactionLock.lock();
+				}
+			}
+			// 当memtable未超过限制，跳出循环
+			if(memTable.size() < Options.MEMTABLE_LIMIT) {
+				break;
+			}
+			// 如果immutable不为空，说明上一次minor compaction未结束，需要等待
+			if(immutableMemTable != null) {
+				backgroundCondition.awaitUninterruptibly();
+			}
+			// 如果level0文件数量超过限制，需要等待major compaction
+			if(versions.getCurrent().files(0) > Options.LEVEL0_LIMIT_COUNT) {
+				backgroundCondition.awaitUninterruptibly();
+			}
+			// 如果mem table达到阈值，则进行minor compaction
+			else if(memTable.size() >= Options.MEMTABLE_LIMIT) {
+				// 关闭旧的log，开启新的log
+				log.close();
+				// 获取文件编号
+				long logNumber = versions.getNextFileNumber();
+				// 新建log
+				log = new LogWriterImpl(databaseDir, logNumber, false);
+				// 新建memtable，原有的memtable转变为immutable memtable
+				immutableMemTable = memTable;
+				memTable = new MemTableImpl();
+				// 触发compaction
+				maybeCompaction();
+			}
+			
+		}
+	}
 	/**
 	 * 尝试触发compact
 	 */

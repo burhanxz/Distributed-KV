@@ -32,11 +32,7 @@ import lsm.base.InternalKey;
 import lsm.base.Options;
 
 public class VersionSetImpl implements VersionSet{
-	/**
-	 * 最大层数
-	 */
-	private static final int LEVELS = 7;
-	private static final int LEVEL0_FILES_LIMIT = 4;
+
 	/**
 	 * manifest 文件编号为1
 	 */
@@ -315,7 +311,7 @@ public class VersionSetImpl implements VersionSet{
 			double score = 0;
 			if (level == 0) {
 				// level0 依据文件数目
-				score = 1.0 * version.files(level) / LEVEL0_FILES_LIMIT;
+				score = 1.0 * version.files(level) / Options.LEVEL0_SCORE_BASE;
 			} else {
 				// level1以上的层次，依据文件大小
 				long levelBytes = version.levelBytes(level);
