@@ -71,13 +71,12 @@ public class VersionSetImpl implements VersionSet{
 	private long logNumber;
 	private final Map<Integer, InternalKey> compactPointers = new TreeMap<>();
 	
-	public VersionSetImpl(File databaseDir, int cacheSize) throws IOException {
+	public VersionSetImpl(File databaseDir, TableCache tableCache) throws IOException {
 		Preconditions.checkNotNull(databaseDir);
 		Preconditions.checkArgument(databaseDir.exists() && databaseDir.isDirectory());
-		Preconditions.checkArgument(cacheSize > 0);
 		this.databaseDir = databaseDir;
 		// 指定缓存文件数量，初始化tablecache
-		this.tableCache = new TableCacheImpl(databaseDir, cacheSize);
+		this.tableCache = tableCache;
 		// 初始化空version作为current
 		Version initialVersion = new VersionImpl(this);
 		appendVersion(initialVersion);

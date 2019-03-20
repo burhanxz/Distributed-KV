@@ -44,11 +44,6 @@ import lsm.base.SeekingIteratorComparator;
 
 public class EngineImpl implements Engine{
 	/**
-	 * 引擎基本配置
-	 */
-	private final Options options;
-
-	/**
 	 * 引擎工作目录
 	 */
 	private final File databaseDir;
@@ -57,7 +52,7 @@ public class EngineImpl implements Engine{
 	/**
 	 * 指示是否关闭
 	 */
-	private final AtomicBoolean shuttingDown = new AtomicBoolean();
+	private final AtomicBoolean shuttingDown;
 	/**
 	 * 写入wal
 	 */
@@ -84,12 +79,13 @@ public class EngineImpl implements Engine{
 	 * 一些待处理的无用文件，可能需要删除
 	 */
 	private final List<Long> pendingFileNumbers = new ArrayList<>();
-	public EngineImpl(Options options, File databaseDir) {
+	public EngineImpl(File databaseDir) throws IOException {
 		// TODO
-		this.options = options;
 		this.databaseDir = databaseDir;
-		this.versions = null;
-		this.tableCache = null;
+		this.tableCache = new TableCacheImpl(databaseDir, Options.TABLE_CACHE_SIZE);
+		this.versions = new VersionSetImpl(databaseDir, tableCache);
+		this.shuttingDown = new AtomicBoolean(false);
+		this.log = null;
 		this.internalKeyComparator = null;
 		this.compactionExecutor = null;
 		this.queue = new ConcurrentLinkedQueue<>();
@@ -107,8 +103,10 @@ public class EngineImpl implements Engine{
 			LockSupport.park();
 		}
 		// 线程检查自己是否 已经完成任务，如果完成，则退出
-		if(task.isDone())
+		if(task.isDone()) {
 			return;
+		}
+			
 		// 线程检查自己是否 未完成任务且是队首，是则进行合并操作
 		else if(!task.isDone() && queue.peek() == task) {
 			// 新建batch
@@ -162,8 +160,13 @@ public class EngineImpl implements Engine{
 			}
 			// 唤醒阻塞在队列中的线程
 			for(Iterator<WriteTask> iter = writeBatch.iterator(); iter.hasNext();) {
-				task.setDone();
-				LockSupport.unpark(task.getThread());
+				WriteTask t = iter.next();
+				t.setDone();
+				// 避免线程自己唤醒自己
+				if(t.thread != Thread.currentThread()) {
+					Preconditions.checkState(t.getThread().isAlive(), t.getThread().getName() + " 已死");
+					LockSupport.unpark(t.getThread());
+				}
 			}
 		}
 	}
