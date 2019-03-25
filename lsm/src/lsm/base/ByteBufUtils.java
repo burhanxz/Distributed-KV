@@ -121,5 +121,15 @@ public class ByteBufUtils {
 	public static ByteBuf str2Buf(String str) {
 		return Unpooled.wrappedBuffer(str.getBytes());
 	}
-
+	/**
+	 * 将buf转换为byte[]
+	 * @param buf
+	 * @return
+	 */
+	public static byte[] buf2Bytes(ByteBuf buf) {
+		Preconditions.checkNotNull(buf);
+		byte[] bytes = new byte[buf.readableBytes()];
+		buf.slice().readBytes(bytes);
+		return bytes;
+	}
 }

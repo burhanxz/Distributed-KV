@@ -32,6 +32,9 @@ public class LookupResult {
 	public ByteBuf getValue() {
 		return value;
 	}
+	public byte[] getValueBytes() {
+		return ByteBufUtils.buf2Bytes(value);
+	}
 	public boolean isDeleted() {
 		return isDeleted;
 	}

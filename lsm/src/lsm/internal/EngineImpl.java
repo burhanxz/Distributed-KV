@@ -24,6 +24,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import com.google.common.base.Preconditions;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import lsm.Engine;
@@ -39,8 +40,11 @@ import lsm.base.Compaction;
 import lsm.base.FileMetaData;
 import lsm.base.FileUtils;
 import lsm.base.InternalKey;
+import lsm.base.LookupKey;
+import lsm.base.LookupResult;
 import lsm.base.Options;
 import lsm.base.SeekingIteratorComparator;
+import lsm.base.Snapshot;
 
 public class EngineImpl implements Engine{
 	/**
@@ -69,12 +73,18 @@ public class EngineImpl implements Engine{
 	private final Comparator<InternalKey> internalKeyComparator;
 	// 执行compaction的线程
 	private final ExecutorService compactionExecutor;
-	// 后台compaction异步操作
+	/**
+	 * 后台compaction异步操作
+	 */
 	private Future<?> backgroundCompaction;
-	// 用作compaction的锁
-	private final ReentrantLock compactionLock = new ReentrantLock();
-	// 用作compaction的等待和唤醒
-	private final Condition backgroundCondition = compactionLock.newCondition();
+	/**
+	 * 此锁用于读、写、合并线程竞争引擎资源，保证在使用引擎一些状态时的线程安全性
+	 */
+	private final ReentrantLock engineLock = new ReentrantLock();
+	/**
+	 * 用作compaction的等待和唤醒
+	 */
+	private final Condition backgroundCondition = engineLock.newCondition();
 	/**
 	 * 一些待处理的无用文件，可能需要删除
 	 */
@@ -119,7 +129,7 @@ public class EngineImpl implements Engine{
 			}
 			// 在batch线程执行到此之后，进来的写线程会出现新的队首
 			// 开始正式执行写入过程
-			compactionLock.lock();
+			engineLock.lock();
 			try {
 				// 先确保空间足够
 				mkRoomForWrite();
@@ -156,7 +166,7 @@ public class EngineImpl implements Engine{
 					memTable.add(internalKey, t.getValue());
 				}
 			} finally {
-				compactionLock.unlock();
+				engineLock.unlock();
 			}
 			// 唤醒阻塞在队列中的线程
 			for(Iterator<WriteTask> iter = writeBatch.iterator(); iter.hasNext();) {
@@ -171,22 +181,62 @@ public class EngineImpl implements Engine{
 		}
 	}
 	
+	@Override
+	public byte[] get(byte[] key) throws Exception {
+		// 包装Lookup key用于查找
+		ByteBuf keyBuf = Unpooled.wrappedBuffer(key);
+		long lastSeq = versions.getLastSequence();
+		LookupKey lookupKey = new LookupKey(new InternalKey(keyBuf, lastSeq));
+		// 先获取快照，将读取操作发起时的版本作为快照
+		try(Snapshot snapshot = new Snapshot(versions.getCurrent())) {
+			LookupResult result = null;
+			// 此处加锁用于竞争memtable资源
+			engineLock.lock();
+			try {
+				// 尝试从memtable中读取
+				result = memTable.get(lookupKey);
+				if (result != null) {
+					return result.getValueBytes();
+				}
+				// 尝试从immutable memtable中读取
+				if (immutableMemTable != null) {
+					result = immutableMemTable.get(lookupKey);
+					if (result != null) {
+						return result.getValueBytes();
+					}
+				}
+			} finally {
+				engineLock.unlock();
+			}
+			// 尝试从快照中读取，即从文件中读取
+			result = snapshot.get(lookupKey);
+			if (result != null) {
+				return result.getValueBytes();
+			}
+			return null;
+		}
+	}
+	
+	/**
+	 * 为写线程确保空间，适当地为合并线程让出系统资源
+	 * @throws IOException
+	 */
 	private void mkRoomForWrite() throws IOException {
 		// 确保写入线程持有锁
-		Preconditions.checkState(compactionLock.isHeldByCurrentThread());
+		Preconditions.checkState(engineLock.isHeldByCurrentThread());
 		while(true) {
 			// 当level0 文件数量超过slow down 指标时，慢行// 当level0 文件数量超过slow down 指标时，慢行
 			if(versions.getCurrent().files(0) > Options.L0_SLOW_DOWN_COUNT) {
 				try {
 					// 延缓生产
 					// 释放锁，交由写线程和compaction线程竞争
-					compactionLock.unlock();
+					engineLock.unlock();
 					Thread.sleep(1);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				} finally {
 					// 重新竞争锁
-					compactionLock.lock();
+					engineLock.lock();
 				}
 			}
 			// 当memtable未超过限制，跳出循环
@@ -219,7 +269,7 @@ public class EngineImpl implements Engine{
 		}
 	}
 	/**
-	 * 尝试触发compact
+	 * 尝试触发compact，是异步操作
 	 */
 	private void maybeCompaction() {
 		// 不应compact的判断
@@ -232,7 +282,7 @@ public class EngineImpl implements Engine{
 			backgroundCompaction = compactionExecutor.submit(new Callable<Void>() {
 				@Override
 				public Void call() throws Exception {
-					compactionLock.lock();
+					engineLock.lock();
 					try {
 						// 执行compaction
 						backgroundCompaction();
@@ -247,7 +297,7 @@ public class EngineImpl implements Engine{
 							try {
 								backgroundCondition.signalAll();
 							} finally {
-								compactionLock.unlock();
+								engineLock.unlock();
 							}
 						}
 					}
@@ -285,7 +335,7 @@ public class EngineImpl implements Engine{
 	 */
 	private void serializeMemTable() throws IOException {
 		// compaction加锁
-		compactionLock.lock();
+		engineLock.lock();
 		try {
 			// immutable memtable不存在或为空，则说明不需要序列化
 			if (immutableMemTable == null || immutableMemTable.isEmpty()) {
@@ -323,7 +373,7 @@ public class EngineImpl implements Engine{
 				backgroundCondition.signalAll();
 			} finally {
 				// 释放compaction锁
-				compactionLock.unlock();
+				engineLock.unlock();
 			}
 		}
 	}
@@ -392,20 +442,20 @@ public class EngineImpl implements Engine{
 		});
 		
 		// major compaction时释放锁
-		compactionLock.unlock();
+		engineLock.unlock();
 		try {
 			// 记录上一个internalKey，用来判断key是否重复
 			InternalKey lastKey = null;
 			// 优先队列中至少需要两个迭代器
 			while (sorter.size() > 0) {
 				// memtable的序列化拥有最高优先级，因为需要保证用户能不断写入数据
-				compactionLock.lock();
+				engineLock.lock();
 				try {
 					serializeMemTable();
 				} catch (IOException e) {
 					e.printStackTrace();
 				} finally {
-					compactionLock.unlock();
+					engineLock.unlock();
 				}
 				
 				// 取出优先队列中的当前数据最小的迭代器
@@ -440,7 +490,7 @@ public class EngineImpl implements Engine{
 			// 终止builder
 			helper.finishSSTable();
 		} finally {
-			compactionLock.lock();
+			engineLock.lock();
 		}
 		//将新建文件信息加入到version中
 		helper.installSSTable();
@@ -456,7 +506,7 @@ public class EngineImpl implements Engine{
 	 */
 	private FileMetaData memToSSTable(MemTable mem) throws IOException {
 		// 必须在compactionLock锁住的临界区中
-		if(!compactionLock.isHeldByCurrentThread()) {
+		if(!engineLock.isHeldByCurrentThread()) {
 			return null;
 		}
 		// 跳过空memtable
@@ -475,7 +525,7 @@ public class EngineImpl implements Engine{
 		// TODO
 		SSTableBuilder tableBuilder = null;
 
-		compactionLock.lock();
+		engineLock.lock();
 		try {
 			// 遍历迭代器
 			Iterator<Entry<InternalKey, ByteBuf>> iter = mem.iterator();
@@ -493,7 +543,7 @@ public class EngineImpl implements Engine{
 			// 完成table的构造
 			tableBuilder.finish();
 		} finally {
-			compactionLock.unlock();
+			engineLock.unlock();
 		}
 		// 获取sstable文件信息
 		FileMetaData fileMetaData = new FileMetaData(fileNumber, file.length(), smallest, largest);
@@ -551,7 +601,7 @@ public class EngineImpl implements Engine{
 		 * @throws IOException 
 		 */
 		void newSSTable() throws IOException {
-			compactionLock.lock();
+			engineLock.lock();
 			try {
 				// 初始化文件信息
 				currentFileNumber = versions.getNextFileNumber();
@@ -567,7 +617,7 @@ public class EngineImpl implements Engine{
 				//TODO
 				builder = null;
 			} finally {
-				compactionLock.unlock();
+				engineLock.unlock();
 			}
 		}
 		/**
@@ -667,4 +717,6 @@ public class EngineImpl implements Engine{
 			return thread;
 		}
 	}
+
+
 }
