@@ -48,7 +48,7 @@ public class CurrentImpl implements Current {
 
 	@Override
 	public String getManifest() throws IOException {
-		Preconditions.checkState(exists());
+		Preconditions.checkState(isAvailable());
 		// 获取current文件内容
 		String manifest = Files.toString(currentFile, UTF_8);
 		Preconditions.checkState(!manifest.isEmpty());
@@ -59,8 +59,8 @@ public class CurrentImpl implements Current {
 	}
 
 	@Override
-	public boolean exists() {
-		return currentFile.exists();
+	public boolean isAvailable() {
+		return currentFile.exists() && currentFile.canRead();
 	}
 
 }

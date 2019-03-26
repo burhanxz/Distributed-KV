@@ -67,7 +67,7 @@ public class LogReaderImpl implements LogReader{
 		return record;
 	}
 	@Override
-	public void close() throws IOException {
+	public synchronized void close() throws IOException {
 		// 关闭file channel
 		if(channel.isOpen()) {
 			channel.close();

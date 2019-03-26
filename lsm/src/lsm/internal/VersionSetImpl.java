@@ -82,7 +82,7 @@ public class VersionSetImpl implements VersionSet{
 		appendVersion(initialVersion);
 		this.current = new CurrentImpl(databaseDir);
 		// 如果current文件不存在，则初始化current
-		if(!current.exists()) {
+		if(!current.isAvailable()) {
 			initCurrent();
 		}
 	}
@@ -90,7 +90,7 @@ public class VersionSetImpl implements VersionSet{
 	@Override
 	public void recover() throws IOException {
 		Preconditions.checkNotNull(current);
-		Preconditions.checkState(current.exists());
+		Preconditions.checkState(current.isAvailable());
 		// 读取current文件中的manifest文件信息
 		String manifestName = current.getManifest();
 		

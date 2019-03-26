@@ -13,10 +13,15 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.LockSupport;
@@ -27,6 +32,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.util.concurrent.RejectedExecutionHandler;
+import lsm.Current;
 import lsm.Engine;
 import lsm.LogWriter;
 import lsm.MemTable;
@@ -47,6 +54,7 @@ import lsm.base.SeekingIteratorComparator;
 import lsm.base.Snapshot;
 
 public class EngineImpl implements Engine{
+	private final static String COMPACTION_THREAD_NAME = "compaction-thread";
 	/**
 	 * 引擎工作目录
 	 */
@@ -91,13 +99,37 @@ public class EngineImpl implements Engine{
 	private final List<Long> pendingFileNumbers = new ArrayList<>();
 	public EngineImpl(File databaseDir) throws IOException {
 		// TODO
-		this.databaseDir = databaseDir;
-		this.tableCache = new TableCacheImpl(databaseDir, Options.TABLE_CACHE_SIZE);
-		this.versions = new VersionSetImpl(databaseDir, tableCache);
 		this.shuttingDown = new AtomicBoolean(false);
 		this.log = null;
-		this.internalKeyComparator = null;
-		this.compactionExecutor = null;
+			
+		// 数据库路径文件初始化
+		this.databaseDir = databaseDir;
+		// 比较器初始化
+		this.internalKeyComparator = Options.INTERNAL_KEY_COMPARATOR;
+		// 跳表初始化
+		this.memTable = new MemTableImpl();
+		// 合并线程初始化，核心线程1，最大线程1，等待时间1day，阻塞队列SynchronousQueue，饱和策略Abort
+		this.compactionExecutor = new ThreadPoolExecutor(1, 1, 1, TimeUnit.DAYS, new SynchronousQueue<>(), new CompactionThreadFactory(), new ThreadPoolExecutor.AbortPolicy());
+		// table cache初始化
+		this.tableCache = new TableCacheImpl(databaseDir, Options.TABLE_CACHE_SIZE);
+		
+		engineLock.lock();
+		try {
+			// 检验current
+			Current current = new CurrentImpl(databaseDir);
+			Preconditions.checkState(current.isAvailable(), "current不可用");
+			// 建立versionSet
+			this.versions = new VersionSetImpl(databaseDir, tableCache);
+			// versionSet.recover 从持久化信息中导入版本信息
+			versions.recover();
+			// TODO 将所有未及时写入memtable的log文件排好序，重新写入memtable
+			// TODO 更新版本
+			// 尝试触发一次compaction
+			maybeCompaction();
+		} finally {
+			engineLock.unlock();
+		}
+		//初始化 合并写入队列
 		this.queue = new ConcurrentLinkedQueue<>();
 	}
 	
@@ -718,5 +750,18 @@ public class EngineImpl implements Engine{
 		}
 	}
 
+	private static class CompactionThreadFactory implements ThreadFactory{
 
+		@Override
+		public Thread newThread(Runnable r) {
+			// 规定线程名称
+			Thread t = new Thread(COMPACTION_THREAD_NAME);
+			// 处理未捕获的异常
+			t.setUncaughtExceptionHandler((thread, e) -> {
+				e.printStackTrace();
+			});
+			return t;
+		}
+		
+	}
 }

@@ -32,5 +32,5 @@ public interface Current {
 	 * 检查current文件是否存在
 	 * @return
 	 */
-	public boolean exists();
+	public boolean isAvailable();
 }
